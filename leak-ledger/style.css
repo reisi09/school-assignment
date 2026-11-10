@@ -1,0 +1,140 @@
+/* style.css
+   색과 글꼴은 .streamlit/config.toml에서 정한다.
+   여기서는 설정 파일로 바꿀 수 없는 부분만 보완한다.
+   Streamlit이 넣는 규칙이 더 우선하는 곳에는 !important를 붙였다. */
+
+:root {
+  --ink: #0b3231;    /* 본문 글자 */
+  --focus: #06706d;  /* 포커스와 선택 표시 (흰 배경 대비 5.9:1) */
+}
+
+/* 글자를 드래그해 선택한 영역도 팔레트 색을 쓴다. */
+::selection {
+  background: #9ceaef;
+  color: var(--ink);
+}
+
+/* 한글은 단어 중간에서 줄이 바뀌지 않게 한다. */
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stCaptionContainer"] p {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 숫자는 자릿수 폭을 맞춰 표시한다. */
+[data-testid="stMarkdownContainer"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 입력칸마다 테두리가 있으므로 폼 바깥 테두리는 없앤다. */
+[data-testid="stForm"] {
+  border: none;
+  padding: 0;
+}
+
+/* 영어로 나오는 입력 안내("Press Enter to submit form")는 숨긴다. 버튼이 같은 일을 한다. */
+[data-testid="InputInstructions"] {
+  display: none;
+}
+
+/* 사이드바: 본문과 같은 흰 바탕에 팔레트 색 선 하나로 구분한다. */
+[data-testid="stSidebar"] {
+  border-right: 1px solid #68d8d6;
+}
+
+/* 접는 영역의 테두리는 입력칸보다 연하게 둔다. */
+[data-testid="stExpander"] details {
+  border-color: #68d8d6;
+}
+
+/* 메뉴: 누르기 쉽게 높이를 키우고, 현재 메뉴는 배경색과 굵은 글자로 표시한다. */
+[data-testid="stSidebar"] [data-testid="stRadioOption"] {
+  min-height: 2rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) {
+  background-color: #c4fff9;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) p {
+  font-weight: 600;
+}
+
+/* 주요 버튼은 팔레트 강조색을 그대로 쓰고, 글자는 진한 색으로 둔다 (대비 6.0:1).
+   Streamlit 기본값은 흰 글자에 맞춰 강조색을 어둡게 바꾸기 때문이다. */
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-primaryFormSubmit"] {
+  background-color: #07beb8;
+  border-color: #07beb8;
+  color: var(--ink);
+}
+
+[data-testid="stBaseButton-primary"]:hover,
+[data-testid="stBaseButton-primaryFormSubmit"]:hover {
+  background-color: #3dccc7;
+  border-color: #3dccc7;
+  color: var(--ink);
+}
+
+[data-testid="stBaseButton-primary"]:active,
+[data-testid="stBaseButton-primaryFormSubmit"]:active {
+  background-color: #68d8d6;
+  border-color: #68d8d6;
+  color: var(--ink);
+}
+
+/* 선택한 유출 항목 표시도 강조색 위에 진한 글자를 쓴다. */
+[data-testid="stMultiSelectTagsContainer"] [data-tag],
+[data-testid="stMultiSelectTagsContainer"] [data-tag] span,
+[data-testid="stMultiSelectTagsContainer"] [data-tag] button {
+  color: var(--ink);
+}
+
+/* 체크 표시는 강조색 위에 진한 색으로 그린다 (흰색은 대비 2.3:1로 부족하다). */
+[data-testid="stCheckbox"] svg {
+  stroke: var(--ink) !important;
+}
+
+[data-testid="stCheckbox"] div:has(> svg) {
+  border-color: var(--ink) !important;
+}
+
+/* 키보드로 이동할 때 지금 위치를 진한 테두리로 보여 준다. */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[data-testid="stRadioOption"]:has(input:focus-visible),
+[data-testid="stCheckbox"] label:has(input:focus-visible) {
+  outline: 2px solid var(--focus) !important;
+  outline-offset: 2px;
+}
+
+[data-testid="data-grid-canvas"]:focus-visible {
+  outline: 2px solid var(--focus) !important;
+  outline-offset: -2px;
+}
+
+/* 입력칸은 포커스를 받으면 테두리를 진하고 두껍게 한다. */
+[data-testid="stTextInputRootElement"]:focus-within,
+[data-testid="stNumberInputContainer"]:focus-within,
+[data-testid="stDateInput"] [role="group"]:focus-within,
+[data-testid="stSelectbox"] [role="group"]:focus-within,
+[data-testid="stMultiSelect"] [role="group"]:focus-within {
+  border-color: var(--focus) !important;
+  box-shadow: 0 0 0 1px var(--focus);
+}
+
+/* 현재 메뉴의 동그라미도 흰 바탕에서 잘 보이는 진한 색으로 칠한다. */
+[data-testid="stSidebar"] [data-testid="stRadioOption"][data-selected="true"] > div > div:first-child {
+  background-color: var(--focus);
+  border-color: var(--focus);
+}
+
+/* 날짜 칸에서 고른 부분(연·월·일)도 강조색 위에 진한 글자와 테두리로 표시한다. */
+[data-testid="stDateInput"] [role="spinbutton"]:focus {
+  color: var(--ink) !important;
+  outline: 2px solid var(--focus) !important;
+}
