@@ -1,17 +1,20 @@
 # 유출장부 화면 설정
 #
-# 팔레트
-#   light-sea-green #07beb8  강조색(주요 버튼, 체크, 선택 표시)
-#   strong-cyan     #3dccc7  주요 버튼에 마우스를 올렸을 때
-#   pearl-aqua      #68d8d6  표 안쪽 선, 사이드바와 접는 영역의 테두리
-#   icy-aqua        #9ceaef  성공 안내 배경, 글자 선택 영역
-#   icy-aqua-2      #c4fff9  현재 메뉴 표시, 정보 안내 배경
+# 바탕은 옅은 회청색, 내용은 흰 카드에 담는다. 글자는 남색 계열이다.
+#   #f4f8fb  화면 바탕
+#   #ffffff  카드, 사이드바
+#   #f4f7fa  입력칸 바탕
+#   #101828  본문 글자, 주요 버튼
+#   #5d6b82  보조 글자 (흰 배경 대비 5.4:1)
+#   #8a94a5  입력칸 테두리 (흰 배경 대비 3.1:1)
 #
-# 팔레트는 모두 밝은 색이라 글자색으로는 대비가 부족하다.
-# 글자와 입력창 테두리에는 같은 색상 계열의 어두운 색을 따로 둔다.
-#   #0b3231  본문 글자 (흰 배경 대비 13.9:1, #07beb8 위 6.0:1)
-#   #06706d  링크 (흰 배경 대비 5.9:1)
-#   #078f8b  입력창 테두리 (흰 배경 대비 3.9:1)
+# 강조에는 파스텔 색을 쓴다. 기본 팔레트(청록 5색)는 다음과 같이 쓴다.
+#   #07beb8  체크, 진행 막대
+#   #3dccc7  진행 막대 끝 색
+#   #68d8d6  화면 머리 영역의 테두리
+#   #9ceaef  화면 머리 영역 바탕(오른쪽)
+#   #c4fff9  화면 머리 영역 바탕(왼쪽), 현재 메뉴, 정보 안내
+# 상태 표시용 파스텔(연두·노랑·분홍·하늘)은 style.css에 적었다.
 
 [server]
 enableStaticServing = true
@@ -30,29 +33,33 @@ style = "normal"
 base = "light"
 font = "Pretendard, sans-serif"
 baseFontSize = 16
-headingFontSizes = ["1.75rem", "1.25rem", "1.0625rem"]
+headingFontSizes = ["1.75rem", "1.125rem", "1rem"]
 headingFontWeights = [700, 600, 600]
 
 primaryColor = "#07beb8"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#ffffff"
-textColor = "#0b3231"
-linkColor = "#06706d"
-borderColor = "#078f8b"
-dataframeBorderColor = "#68d8d6"
-dataframeHeaderBackgroundColor = "#ffffff"
-dataframeHeaderTextColor = "#0b3231"
-baseRadius = "0.5rem"
+backgroundColor = "#f4f8fb"
+secondaryBackgroundColor = "#f4f7fa"
+textColor = "#101828"
+linkColor = "#1a4fb8"
+borderColor = "#8a94a5"
+dataframeBorderColor = "#e4e9f0"
+dataframeHeaderBackgroundColor = "#f4f7fa"
+dataframeHeaderTextColor = "#344054"
+baseRadius = "0.625rem"
+buttonRadius = "full"
 showWidgetBorder = true
 showSidebarBorder = false
 
-# 안내 상자: 정보와 성공은 팔레트 색, 경고와 오류는 기본 색을 그대로 둔다.
+# 안내 상자도 파스텔 색으로 맞춘다.
 blueBackgroundColor = "#c4fff9"
-blueTextColor = "#0b3231"
-greenBackgroundColor = "#9ceaef"
-greenTextColor = "#0b3231"
+blueTextColor = "#075e5b"
+greenBackgroundColor = "#d9f6e5"
+greenTextColor = "#0b6b3a"
+yellowBackgroundColor = "#fff3c4"
+yellowTextColor = "#6b4e00"
+redBackgroundColor = "#ffe1e8"
+redTextColor = "#9b1c3a"
 
-# 사이드바는 본문과 같은 흰 바탕에 두고, 색은 현재 메뉴 한 줄에만 쓴다 (style.css).
 [theme.sidebar]
 backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f7fa"

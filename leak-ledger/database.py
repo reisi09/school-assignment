@@ -3,7 +3,7 @@
 
 import json
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from rules import calc_risk_score, make_actions
@@ -254,3 +254,30 @@ def save_pwned_count(incident_id, count):
 
     finally:
         conn.close()
+
+
+def add_case(case):
+    """
+    보도된 실제 유출 사례(cases.py)를 서비스와 유출 기록으로 한 번에 등록한다.
+
+    반환값: SUCCESS / DUPLICATE(같은 이름의 서비스가 이미 있음)
+    """
+    status = add_service(case["name"], case["category"], "", "보도된 실제 사례")
+
+    if status != "SUCCESS":
+        return status
+
+    # 방금 등록한 서비스의 번호를 이름으로 찾는다.
+    service_id = None
+
+    for service in get_services(case["name"]):
+        if service["name"] == case["name"]:
+            service_id = service["id"]
+
+    # 발표일이 기사에 없는 사례는 오늘 날짜로 기록한다.
+    if case["date"] is None:
+        notified_date = today_kst()
+    else:
+        notified_date = date.fromisoformat(case["date"])
+
+    return add_incident(service_id, notified_date, case["items"], case["size"])

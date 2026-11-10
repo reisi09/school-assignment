@@ -1,14 +1,18 @@
 /* style.css
-   색과 글꼴은 .streamlit/config.toml에서 정한다.
-   여기서는 설정 파일로 바꿀 수 없는 부분만 보완한다.
+   색과 글꼴의 기본값은 .streamlit/config.toml에서 정한다.
+   여기서는 카드, 알약 모양 표시처럼 설정 파일로 만들 수 없는 모양을 정한다.
    Streamlit이 넣는 규칙이 더 우선하는 곳에는 !important를 붙였다. */
 
 :root {
-  --ink: #0b3231;    /* 본문 글자 */
-  --focus: #06706d;  /* 포커스와 선택 표시 (흰 배경 대비 5.9:1) */
+  --ink: #101828;      /* 본문 글자 */
+  --sub: #344054;      /* 조금 연한 글자 */
+  --muted: #5d6b82;    /* 보조 글자 */
+  --line: #e4e9f0;     /* 카드 안 구분선 */
+  --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.05);
 }
 
-/* 글자를 드래그해 선택한 영역도 팔레트 색을 쓴다. */
+/* ---------- 공통 ---------- */
+
 ::selection {
   background: #9ceaef;
   color: var(--ink);
@@ -17,20 +21,22 @@
 /* 한글은 단어 중간에서 줄이 바뀌지 않게 한다. */
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] li,
-[data-testid="stCaptionContainer"] p {
+[data-testid="stCaptionContainer"] p,
+.hero p,
+.card p {
   word-break: keep-all;
   overflow-wrap: break-word;
 }
 
-/* 숫자는 자릿수 폭을 맞춰 표시한다. */
-[data-testid="stMarkdownContainer"] {
+/* 숫자는 자릿수 폭을 맞춘다. */
+[data-testid="stMain"] {
   font-variant-numeric: tabular-nums;
 }
 
-/* 입력칸마다 테두리가 있으므로 폼 바깥 테두리는 없앤다. */
-[data-testid="stForm"] {
-  border: none;
-  padding: 0;
+/* 내용 폭을 너무 넓지 않게 잡는다. */
+[data-testid="stMainBlockContainer"] {
+  max-width: 72rem;
+  padding-top: 2.5rem;
 }
 
 /* 영어로 나오는 입력 안내("Press Enter to submit form")는 숨긴다. 버튼이 같은 일을 한다. */
@@ -38,21 +44,57 @@
   display: none;
 }
 
-/* 사이드바: 본문과 같은 흰 바탕에 팔레트 색 선 하나로 구분한다. */
+/* ---------- 사이드바 ---------- */
+
 [data-testid="stSidebar"] {
-  border-right: 1px solid #68d8d6;
+  border-right: 1px solid var(--line);
 }
 
-/* 접는 영역의 테두리는 입력칸보다 연하게 둔다. */
-[data-testid="stExpander"] details {
-  border-color: #68d8d6;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
 }
 
-/* 메뉴: 누르기 쉽게 높이를 키우고, 현재 메뉴는 배경색과 굵은 글자로 표시한다. */
-[data-testid="stSidebar"] [data-testid="stRadioOption"] {
-  min-height: 2rem;
-  padding: 0.25rem 0.5rem;
+/* 이름 앞의 표시: 남색 네모 안에 체크 모양을 CSS로 그린다. */
+.brand-mark {
+  position: relative;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 0.5rem;
+  background: var(--ink);
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  left: 0.625rem;
+  top: 0.3125rem;
+  width: 0.4375rem;
+  height: 0.8125rem;
+  border: solid #9ceaef;
+  border-width: 0 0.1875rem 0.1875rem 0;
+  transform: rotate(45deg);
+}
+
+/* 메뉴: 누르기 쉽게 키우고, 현재 메뉴는 배경색과 굵은 글자로 표시한다. */
+[data-testid="stSidebar"] [role="radiogroup"] {
+  gap: 0.25rem;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadioOption"] {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadioOption"]:hover {
+  background-color: #f4f7fa;
 }
 
 [data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) {
@@ -63,34 +105,257 @@
   font-weight: 600;
 }
 
-/* 주요 버튼은 팔레트 강조색을 그대로 쓰고, 글자는 진한 색으로 둔다 (대비 6.0:1).
-   Streamlit 기본값은 흰 글자에 맞춰 강조색을 어둡게 바꾸기 때문이다. */
+/* 메뉴는 아이콘과 이름으로 구분하므로 동그라미는 숨긴다. */
+[data-testid="stSidebar"] [data-testid="stRadioOption"] > div > div:first-child {
+  display: none;
+}
+
+/* ---------- 화면 머리 영역 ---------- */
+
+.hero {
+  padding: 1.75rem 2rem;
+  border: 1px solid #68d8d6;
+  border-radius: 1.5rem;
+  background: linear-gradient(100deg, #c4fff9 0%, #9ceaef 100%);
+}
+
+.hero h1 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.hero p {
+  margin: 0.375rem 0 0;
+  font-size: 1rem;
+  color: var(--sub);
+}
+
+/* ---------- 숫자 요약 카드 ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.stat {
+  padding: 1.125rem 1.25rem;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: var(--card-shadow);
+}
+
+.stat span {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.stat strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.stat i {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: 0.375rem;
+  border-radius: 50%;
+}
+
+.tone-aqua { background: #68d8d6; }
+.tone-mint { background: #7fdcaa; }
+.tone-butter { background: #f2cf55; }
+.tone-rose { background: #f59ab0; }
+.tone-sky { background: #8ab8f5; }
+
+@media (max-width: 640px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- 카드 ---------- */
+
+/* 글만 있는 카드 */
+.card {
+  padding: 1.25rem 1.5rem;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: var(--card-shadow);
+}
+
+.card + .card {
+  margin-top: 1rem;
+}
+
+/* 체크 상자나 버튼이 들어가는 카드 (app.py에서 key가 card_로 시작하는 영역) */
+[class*="st-key-card_"] {
+  padding: 1.25rem 1.5rem;
+  border: none;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: var(--card-shadow);
+}
+
+/* 입력 폼도 카드 모양으로 둔다. */
+[data-testid="stForm"] {
+  padding: 1.5rem;
+  border: none;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: var(--card-shadow);
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-title {
+  margin-right: auto;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.card-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* 이름과 값을 양쪽 끝에 두는 줄 */
+.spec {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.9375rem;
+}
+
+.card-head + .spec,
+.card-note + .spec {
+  margin-top: 0.75rem;
+}
+
+.spec span {
+  flex: none;
+  color: var(--muted);
+}
+
+.spec strong {
+  font-weight: 500;
+  text-align: right;
+  color: var(--ink);
+}
+
+/* 알약 모양 표시 */
+.pill {
+  display: inline-block;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.pill + .pill {
+  margin-left: 0.25rem;
+}
+
+.pill-aqua { background: #c4fff9; color: #075e5b; }
+.pill-mint { background: #d9f6e5; color: #0b6b3a; }
+.pill-butter { background: #fff3c4; color: #6b4e00; }
+.pill-rose { background: #ffe1e8; color: #9b1c3a; }
+.pill-sky { background: #e1eeff; color: #1a4fb8; }
+.pill-gray { background: #eef2f6; color: #344054; }
+
+/* 진행 막대 */
+.progress {
+  height: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  background: #e6edf3;
+  overflow: hidden;
+}
+
+.progress div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #07beb8, #3dccc7);
+}
+
+/* 남은 조치 목록 */
+.todo {
+  margin: 0.75rem 0 0;
+  padding-left: 1.125rem;
+  font-size: 0.9375rem;
+  color: var(--sub);
+}
+
+.empty {
+  padding: 2rem 1.5rem;
+  border: 1px dashed #b9c2d0;
+  border-radius: 1.25rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ---------- 버튼과 입력 ---------- */
+
+/* 주요 버튼: 남색 알약 모양에 흰 글자 (대비 17.8:1) */
 [data-testid="stBaseButton-primary"],
 [data-testid="stBaseButton-primaryFormSubmit"] {
-  background-color: #07beb8;
-  border-color: #07beb8;
-  color: var(--ink);
+  background-color: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff;
 }
 
 [data-testid="stBaseButton-primary"]:hover,
 [data-testid="stBaseButton-primaryFormSubmit"]:hover {
-  background-color: #3dccc7;
-  border-color: #3dccc7;
+  background-color: #2a3245;
+  border-color: #2a3245;
+  color: #ffffff;
+}
+
+/* 보조 버튼: 흰 알약 모양 */
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-secondaryFormSubmit"] {
+  background-color: #ffffff;
+  border-color: #cfd6e2;
   color: var(--ink);
 }
 
-[data-testid="stBaseButton-primary"]:active,
-[data-testid="stBaseButton-primaryFormSubmit"]:active {
-  background-color: #68d8d6;
-  border-color: #68d8d6;
+[data-testid="stBaseButton-secondary"]:hover,
+[data-testid="stBaseButton-secondaryFormSubmit"]:hover {
+  background-color: #f4f7fa;
+  border-color: #8a94a5;
   color: var(--ink);
 }
 
-/* 선택한 유출 항목 표시도 강조색 위에 진한 글자를 쓴다. */
+/* 선택한 유출 항목 표시: 파스텔 바탕에 진한 글자 */
+[data-testid="stMultiSelectTagsContainer"] [data-tag] {
+  background-color: #c4fff9 !important;
+}
+
 [data-testid="stMultiSelectTagsContainer"] [data-tag],
 [data-testid="stMultiSelectTagsContainer"] [data-tag] span,
 [data-testid="stMultiSelectTagsContainer"] [data-tag] button {
-  color: var(--ink);
+  color: #075e5b !important;
 }
 
 /* 체크 표시는 강조색 위에 진한 색으로 그린다 (흰색은 대비 2.3:1로 부족하다). */
@@ -102,39 +367,55 @@
   border-color: var(--ink) !important;
 }
 
-/* 키보드로 이동할 때 지금 위치를 진한 테두리로 보여 준다. */
+/* ---------- 키보드 포커스 ---------- */
+
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible,
 [data-testid="stRadioOption"]:has(input:focus-visible),
 [data-testid="stCheckbox"] label:has(input:focus-visible) {
-  outline: 2px solid var(--focus) !important;
+  outline: 2px solid var(--ink) !important;
   outline-offset: 2px;
 }
 
-[data-testid="data-grid-canvas"]:focus-visible {
-  outline: 2px solid var(--focus) !important;
-  outline-offset: -2px;
-}
-
-/* 입력칸은 포커스를 받으면 테두리를 진하고 두껍게 한다. */
 [data-testid="stTextInputRootElement"]:focus-within,
 [data-testid="stNumberInputContainer"]:focus-within,
-[data-testid="stDateInput"] [role="group"]:focus-within,
 [data-testid="stSelectbox"] [role="group"]:focus-within,
 [data-testid="stMultiSelect"] [role="group"]:focus-within {
-  border-color: var(--focus) !important;
-  box-shadow: 0 0 0 1px var(--focus);
+  border-color: var(--ink) !important;
+  box-shadow: 0 0 0 1px var(--ink);
 }
 
-/* 현재 메뉴의 동그라미도 흰 바탕에서 잘 보이는 진한 색으로 칠한다. */
-[data-testid="stSidebar"] [data-testid="stRadioOption"][data-selected="true"] > div > div:first-child {
-  background-color: var(--focus);
-  border-color: var(--focus);
-}
-
-/* 날짜 칸에서 고른 부분(연·월·일)도 강조색 위에 진한 글자와 테두리로 표시한다. */
 [data-testid="stDateInput"] [role="spinbutton"]:focus {
   color: var(--ink) !important;
-  outline: 2px solid var(--focus) !important;
+  outline: 2px solid var(--ink) !important;
+}
+
+/* 카드 안의 링크 */
+.card a {
+  font-weight: 500;
+  color: #1a4fb8;
+}
+
+/* 대응 상태 선택: 고른 칸은 파스텔 바탕에 진한 글자로 표시한다 (대비 6.9:1). */
+[data-testid="stButtonGroup"] button[aria-checked="true"] {
+  background-color: #c4fff9 !important;
+  border-color: #68d8d6 !important;
+  color: #075e5b !important;
+}
+
+[data-testid="stButtonGroup"] button[aria-checked="true"] p {
+  font-weight: 600;
+  color: #075e5b !important;
+}
+
+/* 좁은 화면에서는 위쪽 메뉴 단추에 가려지지 않게 여백을 늘린다. */
+@media (max-width: 640px) {
+  [data-testid="stMainBlockContainer"] {
+    padding-top: 4rem;
+  }
+
+  .hero {
+    padding: 1.25rem 1.5rem;
+  }
 }

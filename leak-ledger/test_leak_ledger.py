@@ -148,6 +148,46 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(saved["actions"][0]["done_date"], "2026-11-10")
         self.assertEqual(saved["actions"][1]["done_date"], "2026-11-11")
 
+    def test_real_case_is_registered_once(self):
+        # 기사에 적힌 사례 하나를 서비스와 유출 기록으로 등록한다.
+        case = {
+            "name": "대신증권",
+            "category": "금융",
+            "date": "2026-10-28",
+            "size": 38490,
+            "items": ["이름", "이메일", "주소", "계좌번호"],
+        }
+
+        self.assertEqual(database.add_case(case), "SUCCESS")
+
+        incident = database.get_incidents()[0]
+
+        self.assertEqual(incident["service_name"], "대신증권")
+        self.assertEqual(incident["notified_date"], "2026-10-28")
+        self.assertEqual(incident["risk_score"], 6)
+        self.assertEqual(incident["leak_size"], 38490)
+
+        # 같은 사례를 다시 누르면 서비스도 기록도 늘지 않는다.
+        self.assertEqual(database.add_case(case), "DUPLICATE")
+        self.assertEqual(len(database.get_services()), 1)
+        self.assertEqual(len(database.get_incidents()), 1)
+
+    def test_real_case_without_date_uses_today(self):
+        case = {
+            "name": "빗썸",
+            "category": "금융",
+            "date": None,
+            "size": 6444,
+            "items": ["주민등록번호", "신분증 사본"],
+        }
+
+        database.add_case(case)
+
+        self.assertEqual(
+            database.get_incidents()[0]["notified_date"],
+            database.today_kst().isoformat(),
+        )
+
 
 class ApiTest(unittest.TestCase):
     def fake_response(self, text, status_code=200):
