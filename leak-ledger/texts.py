@@ -4,25 +4,20 @@
 # {name}처럼 중괄호로 둘러싼 부분은 실행할 때 값으로 바뀐다.
 
 TEXT = {
-    "tagline": "유출 뒤 할 일을 정리하는 기록장",
     "menu_intro": "소개",
     "menu_record": "기록하기",
     "menu_todo": "할 일",
-    "intro_hero_title": "유출 알림을 받았다면",
     "intro_hero_body": "유출 알림에 적힌 내용을 기록하면 위험 정도와 할 일을 알려 드립니다. 끝낸 일은 체크해 남은 일을 확인하세요.",
     "intro_start_button": "유출 알림 기록하기",
     "intro_example_button": "실제 사례로 먼저 해 보기",
     "intro_progress": "기록 {records}건에 할 일 {remaining}개가 남아 있습니다.",
     "intro_progress_button": "할 일 보기",
-    "intro_steps_title": "이렇게 사용하세요",
     "step1_title": "유출 알림 기록",
     "step1_body": "유출 알림을 보고 서비스 이름과 유출된 정보를 적으세요.",
     "step2_title": "위험과 할 일 확인",
     "step2_body": "유출된 정보에 따른 위험 정도와 할 일을 확인하세요.",
     "step3_title": "끝낸 일 체크",
     "step3_body": "할 일을 마칠 때마다 체크하세요.",
-    "intro_why_title": "유출 뒤에 할 일이 있습니다",
-    "intro_why_body": "2026년 10월 주요 기업·기관 25곳의 개인정보 유출 규모는 단순 합산 약 534만 건입니다. 중복이 포함돼 실제 피해 인원과는 다릅니다. 유출 알림을 받았다면 해야 할 일을 확인하세요.",
     "intro_why_source_label": "출처: 연합뉴스 2026.11.1.",
     "intro_does_title": "앱이 해 주는 일",
     "intro_does": [
@@ -135,5 +130,16 @@ TEXT = {
     "case_note_adobe": "약 1억 5천만 계정이 유출됐고 허술하게 가린 비밀번호 다수가 풀렸으며 힌트는 그대로 드러났습니다.",
     "case_note_linkedin": "2012년 해킹은 4년 뒤인 2016년 약 1억 6천만 건이 불법 거래 시장에 나오며 드러났습니다.",
     "case_note_facebook": "2021년 4월, 5억 명이 넘는 이용자 정보가 누구나 내려받도록 공개됐습니다.",
-    "case_note_canva": "2019년 5월, 디자인 도구 Canva에서 1억 3,700만 명의 정보가 유출됐습니다."
+    "case_note_canva": "2019년 5월, 디자인 도구 Canva에서 1억 3,700만 명의 정보가 유출됐습니다.",
+    "hero_line1": "유출 알림을",
+    "hero_line2": "받았다면",
+    "nav_cta": "유출 기록하기",
+    "stat1_label": "10월 유출 기업·기관",
+    "stat2_label": "10월 유출 건수 합계",
+    "stat3_label": "기록해 볼 실제 사례",
+    "stats_note": "앞 두 수치는 연합뉴스 2026.11.1. 보도이며 중복돼 피해 인원과 다릅니다.",
+    "steps_line1": "세 단계로",
+    "steps_line2": "할 일을 챙기세요",
+    "intro_example_note": "처음엔 실제 사례로\n먼저 해 보세요",
+    "phone_label": "할 일 화면 미리 보기"
 }
