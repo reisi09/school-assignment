@@ -14,6 +14,7 @@ import requests
 import api
 import database
 import rules
+from texts import TEXT
 
 
 class RulesTest(unittest.TestCase):
@@ -30,7 +31,7 @@ class RulesTest(unittest.TestCase):
 
         self.assertEqual(score, 10)
         self.assertEqual(rules.get_risk_grade(score), "높음")
-        self.assertIn("명의도용 여부 확인", rules.make_actions(items))
+        self.assertIn(TEXT["act_identity"], rules.make_actions(items))
 
     def test_grade_boundaries(self):
         self.assertEqual(rules.get_risk_grade(3), "낮음")
@@ -42,7 +43,10 @@ class RulesTest(unittest.TestCase):
         items = ["이름", "차량번호"]
 
         self.assertEqual(rules.calc_risk_score(items), 1)
-        self.assertIn("직접 확인 필요: 차량번호", rules.make_actions(items))
+        self.assertIn(
+            TEXT["act_unknown"].format(item="차량번호"),
+            rules.make_actions(items),
+        )
 
     def test_tc08_done_date_is_kept_and_cleared(self):
         actions = [
@@ -187,6 +191,28 @@ class DatabaseTest(unittest.TestCase):
             database.get_incidents()[0]["notified_date"],
             database.today_kst().isoformat(),
         )
+
+    def test_record_registers_service_only_when_valid(self):
+        today = database.today_kst()
+        tomorrow = today + timedelta(days=1)
+
+        # 잘못된 입력은 서비스도 기록도 남기지 않는다.
+        self.assertEqual(database.add_record("  ", "기타", "", today, ["이름"], 0), "EMPTY")
+        self.assertEqual(database.add_record("가상몰", "쇼핑", "", today, [], 0), "NO_ITEMS")
+        self.assertEqual(
+            database.add_record("가상몰", "쇼핑", "", tomorrow, ["이름"], 0),
+            "FUTURE_DATE",
+        )
+        self.assertEqual(database.get_services(), [])
+
+        # 처음 적는 서비스는 함께 등록되고, 같은 이름으로 다시 적으면 서비스는 늘지 않는다.
+        self.assertEqual(database.add_record("가상몰", "쇼핑", "", today, ["이름"], 0), "SUCCESS")
+        self.assertEqual(
+            database.add_record("가상몰 ", "기타", "", today, ["비밀번호"], 0),
+            "SUCCESS",
+        )
+        self.assertEqual(len(database.get_services()), 1)
+        self.assertEqual(len(database.get_incidents("가상몰")), 2)
 
 
 class ApiTest(unittest.TestCase):

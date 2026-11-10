@@ -1,20 +1,13 @@
 # 유출장부 화면 설정
 #
-# 바탕은 옅은 회청색, 내용은 흰 카드에 담는다. 글자는 남색 계열이다.
-#   #f4f8fb  화면 바탕
+# 색은 남색과 선명한 민트 두 가지가 중심이다. 로고와 같은 색이다.
+#   #0d1627  남색: 글자, 소개 화면 머리 영역, 현재 메뉴
+#   #06e7c4  민트: 주요 버튼, 체크, 진행 막대 (글자는 항상 남색을 올린다. 대비 11:1)
+#   #f7f8fb  화면 바탕
 #   #ffffff  카드, 사이드바
-#   #f4f7fa  입력칸 바탕
-#   #101828  본문 글자, 주요 버튼
 #   #5d6b82  보조 글자 (흰 배경 대비 5.4:1)
 #   #8a94a5  입력칸 테두리 (흰 배경 대비 3.1:1)
-#
-# 강조에는 파스텔 색을 쓴다. 기본 팔레트(청록 5색)는 다음과 같이 쓴다.
-#   #07beb8  체크, 진행 막대
-#   #3dccc7  진행 막대 끝 색
-#   #68d8d6  화면 머리 영역의 테두리
-#   #9ceaef  화면 머리 영역 바탕(오른쪽)
-#   #c4fff9  화면 머리 영역 바탕(왼쪽), 현재 메뉴, 정보 안내
-# 상태 표시용 파스텔(연두·노랑·분홍·하늘)은 style.css에 적었다.
+# 위험과 상태 표시는 빨강 #d92d3a, 노랑 #ffd21f, 회색 #475467을 쓴다 (style.css).
 
 [server]
 enableStaticServing = true
@@ -36,30 +29,30 @@ baseFontSize = 16
 headingFontSizes = ["1.75rem", "1.125rem", "1rem"]
 headingFontWeights = [700, 600, 600]
 
-primaryColor = "#07beb8"
-backgroundColor = "#f4f8fb"
-secondaryBackgroundColor = "#f4f7fa"
-textColor = "#101828"
-linkColor = "#1a4fb8"
+primaryColor = "#06e7c4"
+backgroundColor = "#f7f8fb"
+secondaryBackgroundColor = "#f2f4f8"
+textColor = "#0d1627"
+linkColor = "#0d1627"
 borderColor = "#8a94a5"
 dataframeBorderColor = "#e4e9f0"
-dataframeHeaderBackgroundColor = "#f4f7fa"
+dataframeHeaderBackgroundColor = "#f2f4f8"
 dataframeHeaderTextColor = "#344054"
 baseRadius = "0.625rem"
 buttonRadius = "full"
 showWidgetBorder = true
 showSidebarBorder = false
 
-# 안내 상자도 파스텔 색으로 맞춘다.
-blueBackgroundColor = "#c4fff9"
-blueTextColor = "#075e5b"
-greenBackgroundColor = "#d9f6e5"
-greenTextColor = "#0b6b3a"
-yellowBackgroundColor = "#fff3c4"
-yellowTextColor = "#6b4e00"
-redBackgroundColor = "#ffe1e8"
-redTextColor = "#9b1c3a"
+# 안내 상자: 성공은 민트, 주의는 노랑, 오류는 빨강, 정보는 회색
+greenBackgroundColor = "#06e7c4"
+greenTextColor = "#0d1627"
+yellowBackgroundColor = "#ffd21f"
+yellowTextColor = "#0d1627"
+redBackgroundColor = "#d92d3a"
+redTextColor = "#ffffff"
+blueBackgroundColor = "#e4e9f0"
+blueTextColor = "#0d1627"
 
 [theme.sidebar]
 backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f4f7fa"
+secondaryBackgroundColor = "#f2f4f8"

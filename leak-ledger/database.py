@@ -256,28 +256,64 @@ def save_pwned_count(incident_id, count):
         conn.close()
 
 
+def find_service_id(name):
+    """이름이 같은 서비스의 번호를 찾는다. 없으면 None을 돌려준다."""
+    name = name.strip()
+
+    for service in get_services(name):
+        # 서비스 이름은 대소문자를 구분하지 않는다 (테이블의 COLLATE NOCASE와 같은 기준).
+        if service["name"].casefold() == name.casefold():
+            return service["id"]
+
+    return None
+
+
+def add_record(name, category, memo, notified_date, items, leak_size):
+    """
+    서비스 이름과 유출 내용을 한 번에 기록한다.
+    처음 적는 서비스면 서비스도 함께 등록한다.
+
+    반환값: SUCCESS / EMPTY(빈 이름) / NO_ITEMS / FUTURE_DATE
+    """
+    # 서비스만 만들어지고 유출 기록은 실패하는 일이 없도록 먼저 모두 확인한다.
+    if name.strip() == "":
+        return "EMPTY"
+
+    if len(items) == 0:
+        return "NO_ITEMS"
+
+    if notified_date > today_kst():
+        return "FUTURE_DATE"
+
+    service_id = find_service_id(name)
+
+    if service_id is None:
+        add_service(name, category, "", memo)
+        service_id = find_service_id(name)
+
+    return add_incident(service_id, notified_date, items, leak_size)
+
+
 def add_case(case):
     """
-    보도된 실제 유출 사례(cases.py)를 서비스와 유출 기록으로 한 번에 등록한다.
+    실제 유출 사례(cases.py)를 서비스와 유출 기록으로 한 번에 등록한다.
 
-    반환값: SUCCESS / DUPLICATE(같은 이름의 서비스가 이미 있음)
+    반환값: SUCCESS / DUPLICATE(이미 기록한 사례)
     """
-    status = add_service(case["name"], case["category"], "", "보도된 실제 사례")
+    if find_service_id(case["name"]) is not None:
+        return "DUPLICATE"
 
-    if status != "SUCCESS":
-        return status
-
-    # 방금 등록한 서비스의 번호를 이름으로 찾는다.
-    service_id = None
-
-    for service in get_services(case["name"]):
-        if service["name"] == case["name"]:
-            service_id = service["id"]
-
-    # 발표일이 기사에 없는 사례는 오늘 날짜로 기록한다.
+    # 날짜가 출처에 없는 사례는 오늘 날짜로 기록한다.
     if case["date"] is None:
         notified_date = today_kst()
     else:
         notified_date = date.fromisoformat(case["date"])
 
-    return add_incident(service_id, notified_date, case["items"], case["size"])
+    return add_record(
+        case["name"],
+        case["category"],
+        "",
+        notified_date,
+        case["items"],
+        case["size"],
+    )

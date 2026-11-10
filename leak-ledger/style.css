@@ -4,26 +4,29 @@
    Streamlit이 넣는 규칙이 더 우선하는 곳에는 !important를 붙였다. */
 
 :root {
-  --ink: #101828;      /* 본문 글자 */
-  --sub: #344054;      /* 조금 연한 글자 */
-  --muted: #5d6b82;    /* 보조 글자 */
-  --line: #e4e9f0;     /* 카드 안 구분선 */
-  --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.05);
+  --navy: #0d1627;   /* 글자, 소개 머리 영역 */
+  --mint: #06e7c4;   /* 강조색. 이 위의 글자는 항상 남색 */
+  --sub: #344054;    /* 조금 연한 글자 */
+  --muted: #5d6b82;  /* 보조 글자 */
+  --line: #e4e9f0;   /* 구분선 */
+  --card-shadow: 0 1px 2px rgba(13, 22, 39, 0.04), 0 8px 24px rgba(13, 22, 39, 0.05);
 }
 
 /* ---------- 공통 ---------- */
 
 ::selection {
-  background: #9ceaef;
-  color: var(--ink);
+  background: var(--mint);
+  color: var(--navy);
 }
 
 /* 한글은 단어 중간에서 줄이 바뀌지 않게 한다. */
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] li,
 [data-testid="stCaptionContainer"] p,
-.hero p,
-.card p {
+.page-head p,
+.card p,
+.card li,
+.step p {
   word-break: keep-all;
   overflow-wrap: break-word;
 }
@@ -33,10 +36,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 내용 폭을 너무 넓지 않게 잡는다. */
+/* 한 줄로 읽기 편한 폭으로 좁힌다. */
 [data-testid="stMainBlockContainer"] {
-  max-width: 72rem;
-  padding-top: 2.5rem;
+  max-width: 48rem;
+  padding-top: 3rem;
 }
 
 /* 영어로 나오는 입력 안내("Press Enter to submit form")는 숨긴다. 버튼이 같은 일을 한다. */
@@ -54,55 +57,41 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--navy);
 }
 
-/* 이름 앞의 표시: 남색 네모 안에 체크 모양을 CSS로 그린다. */
-.brand-mark {
-  position: relative;
-  flex: none;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.5rem;
-  background: var(--ink);
+.brand img {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
 }
 
-.brand-mark::after {
-  content: "";
-  position: absolute;
-  left: 0.625rem;
-  top: 0.3125rem;
-  width: 0.4375rem;
-  height: 0.8125rem;
-  border: solid #9ceaef;
-  border-width: 0 0.1875rem 0.1875rem 0;
-  transform: rotate(45deg);
-}
-
-/* 메뉴: 누르기 쉽게 키우고, 현재 메뉴는 배경색과 굵은 글자로 표시한다. */
+/* 메뉴: 누르기 쉽게 키우고, 현재 메뉴는 남색 바탕에 흰 글자로 표시한다. */
 [data-testid="stSidebar"] [role="radiogroup"] {
   gap: 0.25rem;
 }
 
 [data-testid="stSidebar"] [data-testid="stRadioOption"] {
   width: 100%;
-  min-height: 2.5rem;
-  padding: 0.5rem 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
   border-radius: 0.625rem;
 }
 
 [data-testid="stSidebar"] [data-testid="stRadioOption"]:hover {
-  background-color: #f4f7fa;
+  background-color: #f2f4f8;
 }
 
 [data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) {
-  background-color: #c4fff9;
+  background-color: var(--navy);
 }
 
-[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) p {
+[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) p,
+[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) span {
   font-weight: 600;
+  color: #ffffff;
 }
 
 /* 메뉴는 아이콘과 이름으로 구분하므로 동그라미는 숨긴다. */
@@ -110,77 +99,100 @@
   display: none;
 }
 
-/* ---------- 화면 머리 영역 ---------- */
+/* ---------- 소개 화면 머리 영역 (app.py에서 key가 hero인 영역) ---------- */
 
-.hero {
-  padding: 1.75rem 2rem;
-  border: 1px solid #68d8d6;
+.st-key-hero {
+  padding: 2.5rem;
   border-radius: 1.5rem;
-  background: linear-gradient(100deg, #c4fff9 0%, #9ceaef 100%);
+  background: var(--navy);
 }
 
-.hero h1 {
+.st-key-hero h1 {
+  margin: 0;
+  padding: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #ffffff;
+  word-break: keep-all;
+}
+
+.st-key-hero p {
+  margin: 0.75rem 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: #c9d1dc;
+  word-break: keep-all;
+}
+
+.st-key-hero .hero-progress {
+  color: var(--mint);
+  font-weight: 600;
+}
+
+/* ---------- 다른 화면의 제목 ---------- */
+
+.page-head h1 {
   margin: 0;
   padding: 0;
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.3;
-  color: var(--ink);
+  color: var(--navy);
 }
 
-.hero p {
+.page-head p {
   margin: 0.375rem 0 0;
   font-size: 1rem;
-  color: var(--sub);
+  color: var(--muted);
 }
 
-/* ---------- 숫자 요약 카드 ---------- */
+/* ---------- 사용 방법 3단계 ---------- */
 
-.stats {
+.steps {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
-.stat {
-  padding: 1.125rem 1.25rem;
+.step {
+  padding: 1.25rem;
   border-radius: 1.25rem;
   background: #ffffff;
   box-shadow: var(--card-shadow);
 }
 
-.stat span {
+.step b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--mint);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.step strong {
   display: block;
-  font-size: 0.875rem;
+  margin-top: 0.75rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.step p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
   color: var(--muted);
 }
 
-.stat strong {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--ink);
-}
-
-.stat i {
-  display: inline-block;
-  width: 0.625rem;
-  height: 0.625rem;
-  margin-right: 0.375rem;
-  border-radius: 50%;
-}
-
-.tone-aqua { background: #68d8d6; }
-.tone-mint { background: #7fdcaa; }
-.tone-butter { background: #f2cf55; }
-.tone-rose { background: #f59ab0; }
-.tone-sky { background: #8ab8f5; }
-
 @media (max-width: 640px) {
-  .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .steps {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -188,19 +200,58 @@
 
 /* 글만 있는 카드 */
 .card {
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem;
   border-radius: 1.25rem;
   background: #ffffff;
   box-shadow: var(--card-shadow);
 }
 
-.card + .card {
-  margin-top: 1rem;
+.card h2 {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.card p {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--sub);
+}
+
+.card ul {
+  margin: 0;
+  padding-left: 1.125rem;
+  line-height: 1.7;
+  color: var(--sub);
+}
+
+.card a {
+  font-weight: 500;
+  color: var(--navy);
+}
+
+.card .source {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .two {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 체크 상자나 버튼이 들어가는 카드 (app.py에서 key가 card_로 시작하는 영역) */
 [class*="st-key-card_"] {
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem;
   border: none;
   border-radius: 1.25rem;
   background: #ffffff;
@@ -216,6 +267,12 @@
   box-shadow: var(--card-shadow);
 }
 
+/* 카드 안에 들어간 폼은 카드가 겹쳐 보이지 않게 테두리 없이 둔다. */
+[class*="st-key-card_"] [data-testid="stForm"] {
+  padding: 0;
+  box-shadow: none;
+}
+
 .card-head {
   display: flex;
   flex-wrap: wrap;
@@ -225,15 +282,22 @@
 
 .card-title {
   margin-right: auto;
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--navy);
+}
+
+.card-meta {
+  margin: 0.375rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
 }
 
 .card-note {
   margin: 0.5rem 0 0;
-  font-size: 0.875rem;
-  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--sub);
 }
 
 /* 이름과 값을 양쪽 끝에 두는 줄 */
@@ -241,14 +305,13 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.5rem 0;
+  padding: 0.625rem 0;
   border-top: 1px solid var(--line);
   font-size: 0.9375rem;
 }
 
-.card-head + .spec,
 .card-note + .spec {
-  margin-top: 0.75rem;
+  margin-top: 0.875rem;
 }
 
 .spec span {
@@ -259,112 +322,165 @@
 .spec strong {
   font-weight: 500;
   text-align: right;
-  color: var(--ink);
+  color: var(--navy);
 }
 
-/* 알약 모양 표시 */
+/* 유출된 정보 이름표: 흰 바탕에 회색 테두리 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+
+.spec .chips {
+  justify-content: flex-end;
+  margin-top: 0;
+}
+
+.chip {
+  padding: 0.125rem 0.625rem;
+  border: 1px solid #b9c2d0;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--sub);
+  white-space: nowrap;
+}
+
+/* 알약 모양 표시: 진한 바탕색으로 한눈에 구분한다. */
 .pill {
   display: inline-block;
   padding: 0.125rem 0.625rem;
   border-radius: 999px;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.5;
   white-space: nowrap;
 }
 
-.pill + .pill {
-  margin-left: 0.25rem;
-}
-
-.pill-aqua { background: #c4fff9; color: #075e5b; }
-.pill-mint { background: #d9f6e5; color: #0b6b3a; }
-.pill-butter { background: #fff3c4; color: #6b4e00; }
-.pill-rose { background: #ffe1e8; color: #9b1c3a; }
-.pill-sky { background: #e1eeff; color: #1a4fb8; }
-.pill-gray { background: #eef2f6; color: #344054; }
+.pill-red { background: #d92d3a; color: #ffffff; }
+.pill-yellow { background: #ffd21f; color: var(--navy); }
+.pill-gray { background: #475467; color: #ffffff; }
+.pill-navy { background: var(--navy); color: #ffffff; }
+.pill-mint { background: var(--mint); color: var(--navy); }
 
 /* 진행 막대 */
+.progress-text {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
 .progress {
   height: 0.5rem;
-  margin-top: 0.5rem;
+  margin-top: 0.375rem;
   border-radius: 999px;
-  background: #e6edf3;
+  background: var(--line);
   overflow: hidden;
 }
 
 .progress div {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #07beb8, #3dccc7);
+  background: var(--mint);
 }
 
-/* 남은 조치 목록 */
-.todo {
-  margin: 0.75rem 0 0;
-  padding-left: 1.125rem;
-  font-size: 0.9375rem;
-  color: var(--sub);
+/* 요약 한 줄 */
+.summary {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--navy);
 }
 
 .empty {
   padding: 2rem 1.5rem;
-  border: 1px dashed #b9c2d0;
+  border: 1px dashed #8a94a5;
   border-radius: 1.25rem;
   text-align: center;
-  color: var(--muted);
+  line-height: 1.6;
+  color: var(--sub);
 }
 
 /* ---------- 버튼과 입력 ---------- */
 
-/* 주요 버튼: 남색 알약 모양에 흰 글자 (대비 17.8:1) */
+/* 주요 버튼: 민트 바탕에 남색 글자 (대비 11:1) */
 [data-testid="stBaseButton-primary"],
 [data-testid="stBaseButton-primaryFormSubmit"] {
-  background-color: var(--ink);
-  border-color: var(--ink);
-  color: #ffffff;
+  background-color: var(--mint);
+  border-color: var(--mint);
+  font-weight: 600;
+  color: var(--navy);
 }
 
 [data-testid="stBaseButton-primary"]:hover,
 [data-testid="stBaseButton-primaryFormSubmit"]:hover {
-  background-color: #2a3245;
-  border-color: #2a3245;
-  color: #ffffff;
+  background-color: #3df2d6;
+  border-color: #3df2d6;
+  color: var(--navy);
 }
 
-/* 보조 버튼: 흰 알약 모양 */
+[data-testid="stBaseButton-primary"] p,
+[data-testid="stBaseButton-primaryFormSubmit"] p {
+  font-weight: 600;
+}
+
+/* 보조 버튼: 흰 바탕 */
 [data-testid="stBaseButton-secondary"],
 [data-testid="stBaseButton-secondaryFormSubmit"] {
   background-color: #ffffff;
-  border-color: #cfd6e2;
-  color: var(--ink);
+  border-color: #8a94a5;
+  color: var(--navy);
 }
 
 [data-testid="stBaseButton-secondary"]:hover,
 [data-testid="stBaseButton-secondaryFormSubmit"]:hover {
-  background-color: #f4f7fa;
-  border-color: #8a94a5;
-  color: var(--ink);
+  background-color: #f2f4f8;
+  border-color: var(--navy);
+  color: var(--navy);
 }
 
-/* 선택한 유출 항목 표시: 파스텔 바탕에 진한 글자 */
-[data-testid="stMultiSelectTagsContainer"] [data-tag] {
-  background-color: #c4fff9 !important;
+/* 남색 머리 영역 안의 보조 버튼: 흰 테두리에 흰 글자 */
+.st-key-hero [data-testid="stBaseButton-secondary"] {
+  background-color: transparent;
+  border-color: #c9d1dc;
+  color: #ffffff;
 }
 
+.st-key-hero [data-testid="stBaseButton-secondary"]:hover {
+  background-color: #1c2a42;
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+/* 선택한 유출 정보 표시: 민트 바탕에 남색 글자 */
 [data-testid="stMultiSelectTagsContainer"] [data-tag],
 [data-testid="stMultiSelectTagsContainer"] [data-tag] span,
 [data-testid="stMultiSelectTagsContainer"] [data-tag] button {
-  color: #075e5b !important;
+  color: var(--navy) !important;
 }
 
-/* 체크 표시는 강조색 위에 진한 색으로 그린다 (흰색은 대비 2.3:1로 부족하다). */
+/* 고르는 스위치: 고른 칸은 남색 바탕에 흰 글자 */
+[data-testid="stButtonGroup"] button[aria-checked="true"] {
+  background-color: var(--navy) !important;
+  border-color: var(--navy) !important;
+  color: #ffffff !important;
+}
+
+[data-testid="stButtonGroup"] button[aria-checked="true"] p {
+  font-weight: 600;
+  color: #ffffff !important;
+}
+
+/* 체크 표시는 민트 위에 남색으로 그린다 (흰색은 대비가 부족하다). */
 [data-testid="stCheckbox"] svg {
-  stroke: var(--ink) !important;
+  stroke: var(--navy) !important;
 }
 
 [data-testid="stCheckbox"] div:has(> svg) {
-  border-color: var(--ink) !important;
+  border-color: var(--navy) !important;
 }
 
 /* ---------- 키보드 포커스 ---------- */
@@ -374,39 +490,27 @@ a:focus-visible,
 summary:focus-visible,
 [data-testid="stRadioOption"]:has(input:focus-visible),
 [data-testid="stCheckbox"] label:has(input:focus-visible) {
-  outline: 2px solid var(--ink) !important;
+  outline: 2px solid var(--navy) !important;
   outline-offset: 2px;
+}
+
+/* 남색 바탕 위에서는 민트 테두리로 보여 준다. */
+.st-key-hero button:focus-visible,
+[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked):has(input:focus-visible) {
+  outline-color: var(--mint) !important;
 }
 
 [data-testid="stTextInputRootElement"]:focus-within,
 [data-testid="stNumberInputContainer"]:focus-within,
 [data-testid="stSelectbox"] [role="group"]:focus-within,
 [data-testid="stMultiSelect"] [role="group"]:focus-within {
-  border-color: var(--ink) !important;
-  box-shadow: 0 0 0 1px var(--ink);
+  border-color: var(--navy) !important;
+  box-shadow: 0 0 0 1px var(--navy);
 }
 
 [data-testid="stDateInput"] [role="spinbutton"]:focus {
-  color: var(--ink) !important;
-  outline: 2px solid var(--ink) !important;
-}
-
-/* 카드 안의 링크 */
-.card a {
-  font-weight: 500;
-  color: #1a4fb8;
-}
-
-/* 대응 상태 선택: 고른 칸은 파스텔 바탕에 진한 글자로 표시한다 (대비 6.9:1). */
-[data-testid="stButtonGroup"] button[aria-checked="true"] {
-  background-color: #c4fff9 !important;
-  border-color: #68d8d6 !important;
-  color: #075e5b !important;
-}
-
-[data-testid="stButtonGroup"] button[aria-checked="true"] p {
-  font-weight: 600;
-  color: #075e5b !important;
+  color: var(--navy) !important;
+  outline: 2px solid var(--navy) !important;
 }
 
 /* 좁은 화면에서는 위쪽 메뉴 단추에 가려지지 않게 여백을 늘린다. */
@@ -415,7 +519,11 @@ summary:focus-visible,
     padding-top: 4rem;
   }
 
-  .hero {
-    padding: 1.25rem 1.5rem;
+  .st-key-hero {
+    padding: 1.75rem 1.5rem;
+  }
+
+  .st-key-hero h1 {
+    font-size: 1.625rem;
   }
 }
