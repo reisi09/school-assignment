@@ -26,8 +26,6 @@ style = "normal"
 base = "light"
 font = "Pretendard, sans-serif"
 baseFontSize = 16
-headingFontSizes = ["1.75rem", "1.125rem", "1rem"]
-headingFontWeights = [700, 600, 600]
 
 primaryColor = "#06e7c4"
 backgroundColor = "#ffffff"
@@ -35,13 +33,9 @@ secondaryBackgroundColor = "#f5f5f5"
 textColor = "#0a0a0a"
 linkColor = "#0a0a0a"
 borderColor = "#8f8f8f"
-dataframeBorderColor = "#e5e5e5"
-dataframeHeaderBackgroundColor = "#f5f5f5"
-dataframeHeaderTextColor = "#0a0a0a"
 baseRadius = "0.625rem"
 buttonRadius = "full"
 showWidgetBorder = true
-showSidebarBorder = false
 
 # 안내 상자: 성공은 민트, 주의는 노랑, 오류는 빨강, 정보는 회색
 greenBackgroundColor = "#06e7c4"

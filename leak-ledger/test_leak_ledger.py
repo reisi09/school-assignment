@@ -77,61 +77,84 @@ class DatabaseTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
         database.create_tables()
+        self.today = database.today_kst()
 
-    def add_sample_incident(self):
-        database.add_service("가상커피 멤버십", "쇼핑", "학교 메일 계정", "")
-        service = database.get_services()[0]
-
-        return database.add_incident(
-            service["id"],
-            database.today_kst(),
+    def add_sample_record(self):
+        return database.add_record(
+            "가상커피 멤버십",
+            "쇼핑",
+            "",
+            self.today,
             ["비밀번호", "전화번호", "이메일"],
             18000,
         )
 
     def test_tc01_first_run_is_empty(self):
-        self.assertEqual(database.get_services(), [])
+        self.assertEqual(database.get_recorded_names(), set())
         self.assertEqual(database.get_incidents(), [])
 
-    def test_tc02_service_is_saved_and_searched(self):
-        self.assertEqual(database.add_service("가상커피 멤버십", "쇼핑", "", ""), "SUCCESS")
-        self.assertEqual(database.add_service("가상은행", "금융", "", ""), "SUCCESS")
+    def test_tc02_record_is_saved_and_searched(self):
+        database.add_record("가상커피 멤버십", "쇼핑", "학교 메일로 가입", self.today, ["이름"], 0)
+        database.add_record("가상은행", "금융", "", self.today, ["계좌번호"], 0)
 
-        found = database.get_services("커피")
+        found = database.get_incidents("커피")
 
-        self.assertEqual([service["name"] for service in found], ["가상커피 멤버십"])
-        self.assertEqual(len(database.get_services(category="금융")), 1)
+        self.assertEqual([incident["service_name"] for incident in found], ["가상커피 멤버십"])
+        self.assertEqual(found[0]["category"], "쇼핑")
+        self.assertEqual(found[0]["memo"], "학교 메일로 가입")
+        self.assertEqual(len(database.get_incidents()), 2)
 
-    def test_tc04_invalid_input_is_rejected(self):
-        self.assertEqual(database.add_service("   ", "쇼핑", "", ""), "EMPTY")
-
-        database.add_service("가상은행", "금융", "", "")
-        self.assertEqual(database.add_service("가상은행", "금융", "", ""), "DUPLICATE")
-
-        service = database.get_services()[0]
-        today = database.today_kst()
-        tomorrow = today + timedelta(days=1)
-
-        self.assertEqual(database.add_incident(service["id"], today, [], 0), "NO_ITEMS")
-        self.assertEqual(
-            database.add_incident(service["id"], tomorrow, ["이름"], 0),
-            "FUTURE_DATE",
-        )
-        self.assertEqual(database.get_incidents(), [])
-
-    def test_tc03_incident_is_saved_with_score_and_actions(self):
-        self.assertEqual(self.add_sample_incident(), "SUCCESS")
+    def test_tc03_record_is_saved_with_score_and_actions(self):
+        self.assertEqual(self.add_sample_record(), "SUCCESS")
 
         incident = database.get_incidents()[0]
 
         self.assertEqual(incident["risk_score"], 5)
         self.assertEqual(incident["leaked_items"], ["비밀번호", "전화번호", "이메일"])
+        self.assertEqual(incident["leak_size"], 18000)
         self.assertEqual(len(incident["actions"]), 5)
         self.assertEqual(incident["resolved"], 0)
         self.assertIsNone(incident["pwned_count"])
 
+    def test_tc04_invalid_input_saves_nothing(self):
+        tomorrow = self.today + timedelta(days=1)
+
+        self.assertEqual(
+            database.add_record("  ", "기타", "", self.today, ["이름"], 0), "EMPTY"
+        )
+        self.assertEqual(
+            database.add_record("가상몰", "쇼핑", "", self.today, [], 0), "NO_ITEMS"
+        )
+        self.assertEqual(
+            database.add_record("가상몰", "쇼핑", "", tomorrow, ["이름"], 0),
+            "FUTURE_DATE",
+        )
+
+        # 서비스만 남고 기록은 없는 상태가 생기지 않는다.
+        self.assertEqual(database.get_recorded_names(), set())
+        self.assertEqual(database.get_incidents(), [])
+
+    def test_same_service_gets_second_record(self):
+        database.add_record("Gasang Mall", "쇼핑", "첫 메모", self.today, ["이름"], 0)
+
+        # 이름의 앞뒤 공백과 대소문자가 달라도 같은 서비스로 본다.
+        database.add_record(" gasang mall ", "기타", "", self.today, ["비밀번호"], 0)
+
+        incidents = database.get_incidents("gasang")
+
+        self.assertEqual(database.get_recorded_names(), {"gasang mall"})
+        self.assertEqual(len(incidents), 2)
+
+        # 서비스의 분류는 처음 값 그대로이고, 메모는 비워서 적으면 바뀌지 않는다.
+        self.assertEqual(incidents[0]["category"], "쇼핑")
+        self.assertEqual(incidents[0]["memo"], "첫 메모")
+
+        database.add_record("Gasang Mall", "쇼핑", "바꾼 메모", self.today, ["이름"], 0)
+
+        self.assertEqual(database.get_incidents("gasang")[0]["memo"], "바꾼 메모")
+
     def test_tc08_resolved_only_when_all_actions_done(self):
-        self.add_sample_incident()
+        self.add_sample_record()
         incident = database.get_incidents()[0]
         count = len(incident["actions"])
 
@@ -152,7 +175,15 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(saved["actions"][0]["done_date"], "2026-11-10")
         self.assertEqual(saved["actions"][1]["done_date"], "2026-11-11")
 
-    def test_real_case_is_registered_once(self):
+    def test_pwned_count_is_saved(self):
+        self.add_sample_record()
+        incident = database.get_incidents()[0]
+
+        database.save_pwned_count(incident["id"], 52372427)
+
+        self.assertEqual(database.get_incidents()[0]["pwned_count"], 52372427)
+
+    def test_real_case_is_recorded_once(self):
         # 기사에 적힌 사례 하나를 서비스와 유출 기록으로 등록한다.
         case = {
             "name": "대신증권",
@@ -173,7 +204,7 @@ class DatabaseTest(unittest.TestCase):
 
         # 같은 사례를 다시 누르면 서비스도 기록도 늘지 않는다.
         self.assertEqual(database.add_case(case), "DUPLICATE")
-        self.assertEqual(len(database.get_services()), 1)
+        self.assertEqual(database.get_recorded_names(), {"대신증권"})
         self.assertEqual(len(database.get_incidents()), 1)
 
     def test_real_case_without_date_uses_today(self):
@@ -189,30 +220,8 @@ class DatabaseTest(unittest.TestCase):
 
         self.assertEqual(
             database.get_incidents()[0]["notified_date"],
-            database.today_kst().isoformat(),
+            self.today.isoformat(),
         )
-
-    def test_record_registers_service_only_when_valid(self):
-        today = database.today_kst()
-        tomorrow = today + timedelta(days=1)
-
-        # 잘못된 입력은 서비스도 기록도 남기지 않는다.
-        self.assertEqual(database.add_record("  ", "기타", "", today, ["이름"], 0), "EMPTY")
-        self.assertEqual(database.add_record("가상몰", "쇼핑", "", today, [], 0), "NO_ITEMS")
-        self.assertEqual(
-            database.add_record("가상몰", "쇼핑", "", tomorrow, ["이름"], 0),
-            "FUTURE_DATE",
-        )
-        self.assertEqual(database.get_services(), [])
-
-        # 처음 적는 서비스는 함께 등록되고, 같은 이름으로 다시 적으면 서비스는 늘지 않는다.
-        self.assertEqual(database.add_record("가상몰", "쇼핑", "", today, ["이름"], 0), "SUCCESS")
-        self.assertEqual(
-            database.add_record("가상몰 ", "기타", "", today, ["비밀번호"], 0),
-            "SUCCESS",
-        )
-        self.assertEqual(len(database.get_services()), 1)
-        self.assertEqual(len(database.get_incidents("가상몰")), 2)
 
 
 class ApiTest(unittest.TestCase):

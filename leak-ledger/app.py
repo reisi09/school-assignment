@@ -1,3 +1,11 @@
+# app.py
+# 유출장부의 화면. 아래 순서로 읽으면 된다.
+#   1. 화면 조각을 만드는 함수   HTML 글자를 만들어 돌려준다
+#   2. 계산과 동작을 돕는 함수   버튼을 눌렀을 때 하는 일
+#   3. 카드를 보여 주는 함수     실제 사례 카드, 기록 카드
+#   4. 화면을 보여 주는 함수     위쪽 메뉴, 소개, 기록하기, 할 일
+#   5. 프로그램 실행             설정을 하고 메뉴에 맞는 화면을 부른다
+
 import html
 from pathlib import Path
 
@@ -9,8 +17,8 @@ from database import (
     add_case,
     add_record,
     create_tables,
-    find_service_id,
     get_incidents,
+    get_recorded_names,
     save_actions,
     save_pwned_count,
     today_kst,
@@ -45,7 +53,7 @@ REGION_SOURCES = {
 }
 
 
-# ---------- 화면 조각을 만드는 함수 ----------
+# ---------- 1. 화면 조각을 만드는 함수 ----------
 # 사용자가 입력한 글자는 esc()로 바꿔서 넣는다.
 # 그대로 넣으면 입력한 글자가 HTML 태그로 동작할 수 있기 때문이다.
 
@@ -96,18 +104,7 @@ def progress_bar(done, total):
     )
 
 
-def show_page_head(title, intro):
-    """화면 제목과 한 줄 설명을 보여 준다."""
-    st.html(f'<h1 class="title">{esc(title)}</h1><p class="lead">{esc(intro)}</p>')
-
-
-def show_notice():
-    """저장한 뒤 화면을 새로 그린 다음에 보여 줄 안내를 꺼내 보여 준다."""
-    if "notice" in st.session_state:
-        st.success(st.session_state.pop("notice"))
-
-
-# ---------- 계산과 동작을 돕는 함수 ----------
+# ---------- 2. 계산과 동작을 돕는 함수 ----------
 
 
 def go_to(menu, mode=None):
@@ -129,7 +126,7 @@ def record_case(index):
 
 
 def count_remaining(incident):
-    """아직 끝내지 않은 할 일의 개수를 센다."""
+    """기록 하나에서 아직 끝내지 않은 할 일의 개수를 센다."""
     remaining = 0
 
     for action in incident["actions"]:
@@ -137,6 +134,16 @@ def count_remaining(incident):
             remaining += 1
 
     return remaining
+
+
+def count_all_remaining(incidents):
+    """여러 기록에 남은 할 일을 모두 더한다."""
+    total = 0
+
+    for incident in incidents:
+        total += count_remaining(incident)
+
+    return total
 
 
 def size_text(size, unknown):
@@ -162,11 +169,15 @@ def save_checked_actions(incident):
     save_actions(incident["id"], actions)
 
 
-# ---------- 카드를 보여 주는 함수 ----------
+# ---------- 3. 카드를 보여 주는 함수 ----------
 
 
-def show_case_card(place, index):
-    """실제 사례 하나를 카드로 보여 준다. place는 카드가 놓인 화면을 구분하는 이름이다."""
+def show_case_card(place, index, recorded):
+    """
+    실제 사례 하나를 카드로 보여 준다.
+
+    place는 카드가 놓인 화면을 구분하는 이름, recorded는 이미 기록한 서비스 이름 집합이다.
+    """
     case = REAL_CASES[index]
 
     with st.container(key=f"card_case_{place}_{index}", height="stretch"):
@@ -185,7 +196,7 @@ def show_case_card(place, index):
             + f'<p class="card-note">{esc(T[case["note"]])}</p>'
         )
 
-        if find_service_id(case["name"]) is not None:
+        if case["name"].casefold() in recorded:
             st.caption(T["case_already"])
         else:
             st.button(
@@ -199,12 +210,15 @@ def show_case_card(place, index):
 
 def show_case_row(place, indexes):
     """실제 사례 카드를 한 줄에 세 개씩 놓는다."""
+    # 이미 기록한 사례인지는 카드마다 묻지 않고 여기서 한 번만 조회한다.
+    recorded = get_recorded_names()
+
     for start in range(0, len(indexes), 3):
         columns = st.columns(3, gap="medium")
 
         for column, index in zip(columns, indexes[start : start + 3]):
             with column:
-                show_case_card(place, index)
+                show_case_card(place, index, recorded)
 
 
 def show_incident_card(incident):
@@ -217,10 +231,17 @@ def show_incident_card(incident):
     else:
         state_pill = pill(T["pill_open"], "gray")
 
-    meta = T["card_meta"].format(
+    # 분류 · 알림 받은 날 · 유출 규모
+    meta = incident["category"] + " · " + T["card_meta"].format(
         date=incident["notified_date"],
         size=size_text(incident["leak_size"], T["size_unknown"]),
     )
+
+    # 메모는 적었을 때만 보여 준다.
+    memo = ""
+
+    if incident["memo"] != "":
+        memo = f'<p class="card-note">{esc(incident["memo"])}</p>'
 
     with st.container(key=f"card_incident_{incident['id']}"):
         st.html(
@@ -230,6 +251,7 @@ def show_incident_card(incident):
             "</div>"
             f'<p class="card-meta">{esc(meta)}</p>'
             + chips(incident["leaked_items"])
+            + memo
             + progress_bar(done, total)
         )
 
@@ -284,58 +306,49 @@ def show_incident_card(incident):
                 st.error(T["pw_found"].format(count=f"{incident['pwned_count']:,}"))
 
 
-# 1. 프로그램 설정
-st.set_page_config(
-    page_title="유출장부",
-    page_icon=str(APP_FOLDER / "static" / "logo.png"),
-    layout="wide",
-)
+# ---------- 4. 화면을 보여 주는 함수 ----------
 
-# 구역, 카드, 알약 모양 버튼 같은 화면 모양을 정하는 CSS
-st.html(APP_FOLDER / "style.css")
 
-create_tables()
+def show_page_head(title, intro):
+    """화면 제목과 한 줄 설명을 보여 준다."""
+    st.html(f'<h1 class="title">{esc(title)}</h1><p class="lead">{esc(intro)}</p>')
 
-# 기록을 저장한 다음 실행에서 옮겨 갈 화면이 정해져 있으면 먼저 반영한다.
-if "pending_menu" in st.session_state:
-    st.session_state["menu"] = st.session_state.pop("pending_menu")
 
-# 1-1. 위쪽 메뉴: 로고, 화면 이름 세 개, 기록하기 버튼
-with st.container(
-    key="nav",
-    horizontal=True,
-    horizontal_alignment="distribute",
-    vertical_alignment="center",
-):
-    st.html(
-        '<div class="brand"><img src="app/static/logo.png" alt="">유출장부</div>',
-        width="content",
-    )
-    menu = st.radio(
-        "유출장부 메뉴",
-        [MENU_INTRO, MENU_RECORD, MENU_TODO],
-        key="menu",
+def show_nav():
+    """위쪽 메뉴(로고, 화면 이름 세 개, 기록하기 버튼)를 보여 주고 고른 화면 이름을 돌려준다."""
+    with st.container(
+        key="nav",
         horizontal=True,
-        label_visibility="collapsed",
-        width="content",
-    )
-    st.button(
-        T["nav_cta"],
-        type="primary",
-        on_click=go_to,
-        args=(MENU_RECORD, T["record_mode_manual"]),
-    )
+        horizontal_alignment="distribute",
+        vertical_alignment="center",
+    ):
+        st.html(
+            '<div class="brand"><img src="app/static/logo.png" alt="">유출장부</div>',
+            width="content",
+        )
+        menu = st.radio(
+            "유출장부 메뉴",
+            [MENU_INTRO, MENU_RECORD, MENU_TODO],
+            key="menu",
+            horizontal=True,
+            label_visibility="collapsed",
+            width="content",
+        )
+        st.button(
+            T["nav_cta"],
+            type="primary",
+            on_click=go_to,
+            args=(MENU_RECORD, T["record_mode_manual"]),
+        )
+
+    return menu
 
 
-# 2. 소개
-if menu == MENU_INTRO:
+def show_intro():
+    """소개 화면: 머리 구역, 사용 방법, 큰 숫자, 해 주는 일과 하지 않는 일."""
     incidents = get_incidents()
-    remaining_total = 0
 
-    for incident in incidents:
-        remaining_total += count_remaining(incident)
-
-    # 2-1. 머리 구역: 큰 제목, 시작 버튼, 실제 사례 카드 세 장
+    # 머리 구역: 큰 제목, 시작 버튼, 실제 사례 카드 세 장
     with st.container(key="sec_hero"):
         hero_left, hero_right = st.columns([7, 5], vertical_alignment="bottom")
 
@@ -347,7 +360,7 @@ if menu == MENU_INTRO:
 
         if len(incidents) > 0:
             progress = T["intro_progress"].format(
-                remaining=remaining_total,
+                remaining=count_all_remaining(incidents),
                 records=len(incidents),
             )
             hero += f'<p class="hero-progress">{esc(progress)}</p>'
@@ -390,7 +403,7 @@ if menu == MENU_INTRO:
 
         show_case_row("hero", featured)
 
-    # 2-2. 사용 방법 세 단계
+    # 사용 방법 세 단계
     steps = ""
 
     for number in (1, 2, 3):
@@ -406,7 +419,7 @@ if menu == MENU_INTRO:
             f'<div class="steps">{steps}</div>'
         )
 
-    # 2-3. 왜 필요한지: 큰 숫자 세 개
+    # 왜 필요한지: 큰 숫자 세 개 (앞의 두 숫자는 연합뉴스 2026.11.1. 보도)
     stats = [
         ("25곳", T["stat1_label"]),
         ("534만 건", T["stat2_label"]),
@@ -426,7 +439,7 @@ if menu == MENU_INTRO:
             f"{esc(T['intro_why_source_label'])}</a></p>"
         )
 
-    # 2-4. 해 주는 일과 하지 않는 일
+    # 해 주는 일과 하지 않는 일
     does = ""
 
     for line in T["intro_does"]:
@@ -447,8 +460,93 @@ if menu == MENU_INTRO:
         st.warning(T["intro_shared_notice"])
 
 
-# 3. 기록하기
-elif menu == MENU_RECORD:
+def show_record_form():
+    """유출 알림을 직접 적는 칸을 보여 주고, 저장 버튼을 누르면 기록한다."""
+    # 저장에 성공한 다음 실행에서만 입력칸을 비운다.
+    # 입력이 잘못됐을 때는 적어 둔 내용을 그대로 둔다.
+    if st.session_state.pop("clear_record_form", False):
+        st.session_state["record_name"] = ""
+        st.session_state["record_items"] = []
+        st.session_state["record_size"] = 0
+        st.session_state["record_other"] = ""
+        st.session_state["record_memo"] = ""
+
+    today = today_kst()
+
+    with st.container(key="card_form"):
+        with st.form("record_form"):
+            name = st.text_input(
+                T["field_service"],
+                key="record_name",
+                placeholder=T["field_service_placeholder"],
+            )
+            selected_items = st.multiselect(
+                T["field_items"],
+                list(ITEM_WEIGHTS),
+                key="record_items",
+                placeholder=T["field_items_placeholder"],
+                select_all=False,
+            )
+            notified_date = st.date_input(
+                T["field_date"],
+                value=today,
+                max_value=today,
+                format="YYYY-MM-DD",
+            )
+
+            # 안 적어도 되는 항목은 접어 둔다.
+            with st.expander(T["more_label"]):
+                category = st.selectbox(
+                    T["field_category"],
+                    CATEGORIES,
+                    index=len(CATEGORIES) - 1,
+                )
+                leak_size = st.number_input(
+                    T["field_size"],
+                    min_value=0,
+                    step=1,
+                    key="record_size",
+                )
+                st.caption(T["field_size_help"])
+                other_items = st.text_input(T["field_other"], key="record_other")
+                st.caption(T["field_other_help"])
+                memo = st.text_input(T["field_memo"], key="record_memo")
+
+            submitted = st.form_submit_button(T["record_submit"], type="primary")
+
+    if not submitted:
+        return
+
+    # 목록에서 고른 정보에 직접 적은 정보를 더한다.
+    items = list(selected_items)
+
+    for item in other_items.split(","):
+        item = item.strip()
+
+        if item != "" and item not in items:
+            items.append(item)
+
+    status = add_record(name, category, memo, notified_date, items, leak_size)
+
+    if status == "SUCCESS":
+        # 저장했으면 할 일 화면으로 옮겨 방금 만든 기록을 보여 준다.
+        st.session_state["notice"] = T["record_saved"].format(name=name.strip())
+        st.session_state["clear_record_form"] = True
+        st.session_state["pending_menu"] = MENU_TODO
+        st.rerun()
+
+    elif status == "EMPTY":
+        st.warning(T["err_no_name"])
+
+    elif status == "NO_ITEMS":
+        st.warning(T["err_no_items"])
+
+    else:
+        st.warning(T["err_future_date"])
+
+
+def show_record():
+    """기록하기 화면: 직접 적거나 실제 사례에서 고른다."""
     with st.container(key="sec_page"):
         show_page_head(T["record_title"], T["record_intro"])
 
@@ -463,7 +561,7 @@ elif menu == MENU_RECORD:
             label_visibility="collapsed",
         )
 
-        # 3-1. 실제 사례에서 고르기: 국내와 해외로 나눠 카드로 보여 준다.
+        # 실제 사례에서 고르기: 국내와 해외로 나눠 카드로 보여 준다.
         if mode == T["record_mode_case"]:
             for region in ("국내", "해외"):
                 indexes = []
@@ -479,91 +577,13 @@ elif menu == MENU_RECORD:
                 )
                 show_case_row("record", indexes)
 
-        # 3-2. 직접 적기: 왼쪽에 적는 칸, 오른쪽에 위험 점수 기준
+        # 직접 적기: 왼쪽에 적는 칸, 오른쪽에 위험 점수를 매기는 기준
         else:
             form_column, guide_column = st.columns([7, 5], gap="large")
 
             with form_column:
-                # 저장에 성공한 다음 실행에서만 입력칸을 비운다.
-                # 입력이 잘못됐을 때는 적어 둔 내용을 그대로 둔다.
-                if st.session_state.pop("clear_record_form", False):
-                    st.session_state["record_name"] = ""
-                    st.session_state["record_items"] = []
-                    st.session_state["record_size"] = 0
-                    st.session_state["record_other"] = ""
-                    st.session_state["record_memo"] = ""
+                show_record_form()
 
-                today = today_kst()
-
-                with st.container(key="card_form"):
-                    with st.form("record_form"):
-                        name = st.text_input(
-                            T["field_service"],
-                            key="record_name",
-                            placeholder=T["field_service_placeholder"],
-                        )
-                        selected_items = st.multiselect(
-                            T["field_items"],
-                            list(ITEM_WEIGHTS),
-                            key="record_items",
-                            placeholder=T["field_items_placeholder"],
-                            select_all=False,
-                        )
-                        notified_date = st.date_input(
-                            T["field_date"],
-                            value=today,
-                            max_value=today,
-                            format="YYYY-MM-DD",
-                        )
-
-                        # 안 적어도 되는 항목은 접어 둔다.
-                        with st.expander(T["more_label"]):
-                            category = st.selectbox(
-                                T["field_category"],
-                                CATEGORIES,
-                                index=len(CATEGORIES) - 1,
-                            )
-                            leak_size = st.number_input(
-                                T["field_size"],
-                                min_value=0,
-                                step=1,
-                                key="record_size",
-                            )
-                            st.caption(T["field_size_help"])
-                            other_items = st.text_input(T["field_other"], key="record_other")
-                            st.caption(T["field_other_help"])
-                            memo = st.text_input(T["field_memo"], key="record_memo")
-
-                        submitted = st.form_submit_button(T["record_submit"], type="primary")
-
-                if submitted:
-                    items = list(selected_items)
-
-                    for item in other_items.split(","):
-                        item = item.strip()
-
-                        if item != "" and item not in items:
-                            items.append(item)
-
-                    status = add_record(name, category, memo, notified_date, items, leak_size)
-
-                    if status == "SUCCESS":
-                        # 저장했으면 할 일 화면으로 옮겨 방금 만든 기록을 보여 준다.
-                        st.session_state["notice"] = T["record_saved"].format(name=name.strip())
-                        st.session_state["clear_record_form"] = True
-                        st.session_state["pending_menu"] = MENU_TODO
-                        st.rerun()
-
-                    elif status == "EMPTY":
-                        st.warning(T["err_no_name"])
-
-                    elif status == "NO_ITEMS":
-                        st.warning(T["err_no_items"])
-
-                    else:
-                        st.warning(T["err_future_date"])
-
-            # 위험 점수를 매기는 기준
             rows = ""
 
             for item, weight in ITEM_WEIGHTS.items():
@@ -577,13 +597,16 @@ elif menu == MENU_RECORD:
             )
 
 
-# 4. 할 일
-elif menu == MENU_TODO:
+def show_todo():
+    """할 일 화면: 요약, 찾기, 기록 카드, 신고·상담할 곳."""
     all_incidents = get_incidents()
 
     with st.container(key="sec_page"):
         show_page_head(T["todo_title"], T["todo_intro"])
-        show_notice()
+
+        # 기록을 저장하고 넘어왔으면 안내를 한 번 보여 준다.
+        if "notice" in st.session_state:
+            st.success(st.session_state.pop("notice"))
 
         if len(all_incidents) == 0:
             st.html(f'<div class="empty">{esc(T["todo_empty"])}</div>')
@@ -596,11 +619,8 @@ elif menu == MENU_TODO:
                     args=(MENU_RECORD, T["record_mode_manual"]),
                 )
         else:
-            # 4-1. 요약 한 줄
-            remaining_total = 0
-
-            for incident in all_incidents:
-                remaining_total += count_remaining(incident)
+            # 요약 한 줄
+            remaining_total = count_all_remaining(all_incidents)
 
             if remaining_total == 0:
                 summary = T["todo_all_done"]
@@ -612,7 +632,7 @@ elif menu == MENU_TODO:
 
             st.html(f'<p class="summary">{esc(summary)}</p>')
 
-            # 4-2. 찾기: 버튼을 눌러야 조건이 적용된다.
+            # 찾기: 버튼을 눌러야 조건이 적용된다.
             with st.form("search_form"):
                 with st.container(horizontal=True, vertical_alignment="bottom"):
                     keyword = st.text_input(T["todo_search_label"], width=320)
@@ -632,12 +652,12 @@ elif menu == MENU_TODO:
             else:
                 status = "전체"
 
-            incidents = get_incidents(keyword, "전체", status)
+            incidents = get_incidents(keyword, status)
 
             if len(incidents) == 0:
                 st.html(f'<div class="empty">{esc(T["todo_no_match"])}</div>')
 
-            # 4-3. 기록마다 카드 하나. 한 줄에 두 개씩, 위험 점수가 높은 기록부터 놓는다.
+            # 기록마다 카드 하나. 한 줄에 두 개씩, 위험 점수가 높은 기록부터 놓는다.
             for start in range(0, len(incidents), 2):
                 columns = st.columns(2, gap="medium")
 
@@ -645,7 +665,7 @@ elif menu == MENU_TODO:
                     with column:
                         show_incident_card(incident)
 
-        # 4-4. 신고하거나 상담받을 곳
+        # 신고하거나 상담받을 곳
         st.html(
             f'<h2 class="group-title">{esc(T["help_label"])}</h2>'
             '<div class="soft" style="margin-top: 1rem">'
@@ -666,3 +686,30 @@ elif menu == MENU_TODO:
             )
             + "</div>"
         )
+
+
+# ---------- 5. 프로그램 실행 ----------
+
+st.set_page_config(
+    page_title="유출장부",
+    page_icon=str(APP_FOLDER / "static" / "logo.png"),
+    layout="wide",
+)
+
+# 구역, 카드, 알약 모양 버튼 같은 화면 모양을 정하는 CSS
+st.html(APP_FOLDER / "style.css")
+
+create_tables()
+
+# 기록을 저장한 다음 실행에서 옮겨 갈 화면이 정해져 있으면 먼저 반영한다.
+if "pending_menu" in st.session_state:
+    st.session_state["menu"] = st.session_state.pop("pending_menu")
+
+menu = show_nav()
+
+if menu == MENU_INTRO:
+    show_intro()
+elif menu == MENU_RECORD:
+    show_record()
+else:
+    show_todo()

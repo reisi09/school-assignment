@@ -14,23 +14,57 @@ https://reisi09-school-assignment-leak-ledgerapp-leak-ledger-jeudp4.streamlit.ap
 | --- | --- |
 | 소개 | 앱의 사용 방법과 해 주는 일을 안내합니다. 기록하기나 실제 사례로 시작합니다. |
 | 기록하기 | 유출 알림 내용을 직접 적거나 실제 사례를 골라 기록합니다. 위험 점수를 매기는 기준도 확인합니다. |
-| 할 일 | 기록별 위험 정도와 할 일을 확인합니다. 끝낸 일을 체크하면 바로 저장됩니다. 이미 퍼진 비밀번호인지 확인하는 기능도 있습니다. |
+| 할 일 | 기록별 위험 정도와 할 일을 확인합니다. 기록 카드에는 서비스 분류와 적어 둔 메모도 함께 보입니다. 서비스 이름으로 검색하고 전체 / 아직 남음 / 다 끝냄으로 골라 볼 수 있습니다. 끝낸 일을 체크하면 바로 저장됩니다. 이미 퍼진 비밀번호인지 확인하는 기능도 있습니다. |
 
 ## 파일 구성
 
 | 파일 | 역할 |
 | --- | --- |
-| `app.py` | Streamlit 화면을 구성합니다. |
+| `app.py` | Streamlit 화면을 그립니다. 파일 안은 역할에 따라 다섯 묶음으로 나뉩니다. |
 | `texts.py` | 화면에 나오는 모든 문구를 모아 둡니다. |
 | `database.py` | SQLite의 `services`, `incidents` 두 테이블에 기록을 저장하고 조회합니다. |
 | `rules.py` | 위험 점수와 등급, 할 일을 정합니다. |
 | `api.py` | Pwned Passwords의 비밀번호 목록에서 입력한 비밀번호를 확인합니다. |
 | `cases.py` | 실제 유출 사례 9건을 담습니다. 국내 5건은 연합뉴스 2026.11.1. 보도, 해외 4건은 Have I Been Pwned 공개 자료를 바탕으로 합니다. |
-| `test_leak_ledger.py` | 앱의 기능을 테스트합니다. |
+| `test_leak_ledger.py` | 테스트 18개로 앱의 기능을 확인합니다. |
 | `.streamlit/config.toml` | 색과 글꼴을 설정합니다. |
 | `style.css` | 카드와 버튼 등 화면 모양을 정합니다. |
 | `static/` | Pretendard 글꼴(SIL OFL 1.1)과 로고를 담습니다. |
 | `requirements.txt` | 배포에 필요한 패키지 목록입니다. |
+
+## 코드 구조
+
+프로젝트 파일끼리는 다음 방향으로 부릅니다.
+
+- `app.py` → `database.py`, `api.py`, `rules.py`, `cases.py`, `texts.py`
+- `database.py` → `rules.py`: 위험 점수와 할 일을 계산한 뒤 저장합니다.
+- `rules.py` → `texts.py`: 할 일 이름을 가져옵니다.
+- `api.py`, `cases.py`, `texts.py`는 다른 프로젝트 파일을 부르지 않습니다.
+
+`app.py`는 위에서부터 다섯 묶음입니다.
+
+| 묶음 | 함수와 하는 일 |
+| --- | --- |
+| 1. 화면 조각을 만드는 함수 | `esc`, `pill`, `risk_pill`, `chips`, `spec_row`, `progress_bar`는 HTML에 넣을 글자를 만들어 돌려줍니다. 사용자가 입력한 글자는 `esc`를 거쳐서 넣습니다. |
+| 2. 계산과 동작을 돕는 함수 | `go_to`는 화면을 옮기고 `record_case`는 사례를 기록합니다. `count_remaining`·`count_all_remaining`은 남은 할 일을 셉니다. `size_text`는 유출 규모를 글자로 바꾸고 `save_checked_actions`는 체크한 내용을 바로 저장합니다. |
+| 3. 카드를 보여 주는 함수 | `show_case_card`, `show_case_row`, `show_incident_card`가 실제 사례 카드와 기록 카드를 보여 줍니다. |
+| 4. 화면을 보여 주는 함수 | `show_page_head`는 화면 제목과 한 줄 설명을 보여 줍니다. `show_nav`는 위쪽 메뉴, `show_intro`는 소개, `show_record`와 `show_record_form`은 기록하기, `show_todo`는 할 일 화면을 보여 줍니다. |
+| 5. 프로그램 실행 | 설정을 하고 메뉴에서 고른 화면의 함수 하나를 부릅니다. |
+
+`database.py`는 다음 함수로 기록을 다룹니다.
+
+- `create_tables`는 테이블을 만들고 `add_record`는 유출 알림 한 건을 저장합니다. `add_case`는 실제 사례를 저장하되 이미 있으면 저장하지 않습니다.
+- `get_recorded_names`는 기록이 있는 서비스 이름을 가져옵니다. `get_incidents`는 서비스 이름 검색과 할 일 상태로 기록을 조회합니다.
+- `save_actions`는 할 일 상태를, `save_pwned_count`는 비밀번호 확인 결과의 횟수를 저장합니다.
+
+`add_record`는 서비스와 유출 기록을 한 번에 저장합니다. 도중에 실패하면 둘 다 저장되지 않습니다. 이름이 같은 서비스가 이미 있으면 대소문자를 구분하지 않고 그 서비스에 기록을 더합니다.
+
+기록 한 건은 다음 순서로 저장됩니다.
+
+1. 기록하기 화면에서 저장 버튼을 누릅니다.
+2. `app.py`의 `show_record_form`이 `database.py`의 `add_record`를 부릅니다.
+3. `rules.py`가 위험 점수와 할 일을 계산하면 `database.py`가 SQLite에 저장합니다.
+4. 저장이 끝나면 할 일 화면으로 이동합니다.
 
 ## 실행 방법
 
