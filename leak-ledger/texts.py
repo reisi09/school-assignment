@@ -54,8 +54,6 @@ TEXT = {
     "err_no_items": "유출된 정보를 고르지 않았으니 알림에 적힌 정보를 하나 이상 선택하세요.",
     "err_future_date": "알림 받은 날이 오늘보다 뒤로 되어 있으니 오늘이나 이전 날짜로 바꾸세요.",
     "record_saved": "{name} 유출 알림을 기록했습니다.",
-    "record_saved_next_button": "할 일 보기",
-    "case_select_label": "기록할 실제 사례",
     "case_group_domestic": "국내",
     "case_group_overseas": "해외",
     "case_date_label": "발생·발표일",
@@ -71,8 +69,6 @@ TEXT = {
     "guide_label": "위험 점수를 매기는 기준",
     "guide_body": "유출된 정보마다 정해진 점수를 더해 위험 등급을 매깁니다. 앱이 정한 기준으로, 공식 위험 등급이 아닙니다.",
     "guide_grades": "0~3점 낮음, 4~7점 보통, 8점 이상 높음",
-    "guide_col_item": "유출된 정보",
-    "guide_col_score": "점수",
     "todo_title": "할 일",
     "todo_intro": "끝낸 일을 체크하면 바로 저장됩니다.",
     "todo_summary": "기록 {records}건에 할 일 {remaining}개가 남아 있습니다.",
@@ -137,9 +133,8 @@ TEXT = {
     "stat1_label": "10월 유출 기업·기관",
     "stat2_label": "10월 유출 건수 합계",
     "stat3_label": "기록해 볼 실제 사례",
-    "stats_note": "앞 두 수치는 연합뉴스 2026.11.1. 보도이며 중복돼 피해 인원과 다릅니다.",
     "steps_line1": "세 단계로",
     "steps_line2": "할 일을 챙기세요",
-    "intro_example_note": "처음엔 실제 사례로\n먼저 해 보세요",
-    "phone_label": "할 일 화면 미리 보기"
+    "intro_why_title": "유출 뒤에 할 일이 있습니다",
+    "intro_why_body": "2026년 10월 주요 기업·기관 25곳의 개인정보 유출 규모는 단순 합산 약 534만 건입니다. 중복이 포함돼 실제 피해 인원과는 다릅니다. 유출 알림을 받았다면 해야 할 일을 확인하세요."
 }

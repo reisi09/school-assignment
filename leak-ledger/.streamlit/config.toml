@@ -1,13 +1,13 @@
 # 유출장부 화면 설정
 #
-# 색은 남색과 선명한 민트 두 가지가 중심이다. 로고와 같은 색이다.
-#   #0d1627  남색: 글자, 주요 버튼, 현재 메뉴 밑줄
-#   #06e7c4  민트: 소개 화면의 판, 체크, 진행 막대 (글자는 항상 남색을 올린다. 대비 11:1)
-#   #d5dae0  화면 바탕, #f5f5f4 그 위의 둥근 종이 (style.css에서 칠한다)
-#   #ffffff  카드
-#   #5d6b82  보조 글자 (흰 배경 대비 5.4:1)
-#   #8a94a5  입력칸 테두리 (흰 배경 대비 3.1:1)
-# 위험과 상태 표시는 빨강 #d92d3a, 노랑 #ffd21f, 회색 #475467을 쓴다 (style.css).
+# vessl.ai 화면에서 잰 색을 따랐다. VESSL의 파란색 자리에는 민트를 쓴다.
+#   #0a0a0a  글자
+#   #696969  보조 글자 (흰 배경 대비 5.5:1)
+#   #ffffff  바탕과 카드, #f5f5f5 회색 면과 입력칸 바탕
+#   #e5e5e5  선, #8f8f8f 입력칸 테두리 (흰 배경 대비 3.2:1)
+#   #101828  주요 버튼
+#   #06e7c4  민트: 소개 화면 머리 구역, 고른 칸, 체크, 진행 막대 (글자는 항상 진한 색을 올린다)
+# 위험 표시는 빨강 #e40014, 노랑 #ffd21f를 쓴다 (style.css).
 
 [server]
 enableStaticServing = true
@@ -30,14 +30,14 @@ headingFontSizes = ["1.75rem", "1.125rem", "1rem"]
 headingFontWeights = [700, 600, 600]
 
 primaryColor = "#06e7c4"
-backgroundColor = "#f7f8fb"
-secondaryBackgroundColor = "#f2f4f8"
-textColor = "#0d1627"
-linkColor = "#0d1627"
-borderColor = "#8a94a5"
-dataframeBorderColor = "#e4e9f0"
-dataframeHeaderBackgroundColor = "#f2f4f8"
-dataframeHeaderTextColor = "#344054"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f5f5f5"
+textColor = "#0a0a0a"
+linkColor = "#0a0a0a"
+borderColor = "#8f8f8f"
+dataframeBorderColor = "#e5e5e5"
+dataframeHeaderBackgroundColor = "#f5f5f5"
+dataframeHeaderTextColor = "#0a0a0a"
 baseRadius = "0.625rem"
 buttonRadius = "full"
 showWidgetBorder = true
@@ -45,14 +45,10 @@ showSidebarBorder = false
 
 # 안내 상자: 성공은 민트, 주의는 노랑, 오류는 빨강, 정보는 회색
 greenBackgroundColor = "#06e7c4"
-greenTextColor = "#0d1627"
+greenTextColor = "#0a0a0a"
 yellowBackgroundColor = "#ffd21f"
-yellowTextColor = "#0d1627"
-redBackgroundColor = "#d92d3a"
+yellowTextColor = "#0a0a0a"
+redBackgroundColor = "#e40014"
 redTextColor = "#ffffff"
-blueBackgroundColor = "#e4e9f0"
-blueTextColor = "#0d1627"
-
-[theme.sidebar]
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f2f4f8"
+blueBackgroundColor = "#f5f5f5"
+blueTextColor = "#0a0a0a"
