@@ -13,7 +13,9 @@ import requests
 
 import api
 import database
+import play
 import rules
+import stats
 from texts import TEXT
 
 
@@ -62,6 +64,123 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(updated[0]["done_date"], "2026-11-04")
         self.assertEqual(updated[1]["done_date"], "2026-11-10")
         self.assertEqual(updated[2], {"name": "C", "done": False, "done_date": None})
+
+    def test_remaining_score_shrinks_as_actions_are_done(self):
+        self.assertEqual(rules.calc_remaining_score(6, 4, 4), 6)
+        self.assertEqual(rules.calc_remaining_score(6, 2, 4), 3)
+        self.assertEqual(rules.calc_remaining_score(5, 0, 3), 0)
+
+        # 할 일이 하나라도 남으면 0점이 되지 않는다.
+        self.assertEqual(rules.calc_remaining_score(1, 1, 4), 1)
+
+    def test_notice_items_are_found_by_other_names(self):
+        text = "■ 유출 항목\n- 성명, 휴대전화번호, 이메일 주소, 주민번호, 신분증 사본 이미지"
+
+        # "이메일 주소"의 주소는 집 주소로 읽지 않는다.
+        self.assertEqual(
+            rules.find_items_in_text(text),
+            ["이름", "전화번호", "이메일", "주민등록번호", "신분증 사본"],
+        )
+
+    def test_notice_skips_items_said_not_leaked(self):
+        text = "이름과 아이디(ID)가 유출되었으며 비밀번호는 유출되지 않았습니다."
+
+        self.assertEqual(rules.find_items_in_text(text), ["이름", "아이디"])
+
+    def test_notice_skips_advice_and_contact(self):
+        text = (
+            "고객님의 이메일, 생년월일이 유출된 사실을 확인했습니다. "
+            "피해를 막기 위해 비밀번호를 변경해 주시기 바랍니다. "
+            "문의: 고객센터 전화번호 1500-0000"
+        )
+
+        self.assertEqual(rules.find_items_in_text(text), ["이메일", "생년월일"])
+
+    def test_notice_without_items_finds_nothing(self):
+        self.assertEqual(rules.find_items_in_text("이벤트에 당첨되셨습니다."), [])
+
+
+class StatsTest(unittest.TestCase):
+    def setUp(self):
+        # database.get_incidents()가 돌려주는 모양을 흉내 낸 기록 세 건
+        done = {"name": "A", "done": True, "done_date": "2026-11-10"}
+        open_ = {"name": "B", "done": False, "done_date": None}
+
+        self.incidents = [
+            {
+                "service_name": "가상은행",
+                "risk_score": 9,
+                "leaked_items": ["이름", "이메일", "주민등록번호"],
+                "actions": [open_, open_, open_],
+            },
+            {
+                "service_name": "가상쇼핑",
+                "risk_score": 4,
+                "leaked_items": ["이메일", "비밀번호"],
+                "actions": [done, open_],
+            },
+            {
+                "service_name": "가상쇼핑",
+                "risk_score": 1,
+                "leaked_items": ["이메일"],
+                "actions": [done],
+            },
+        ]
+
+    def test_repeated_items_count_services_not_records(self):
+        # 이메일은 기록 세 건에 있지만 서비스는 두 곳이다.
+        self.assertEqual(
+            stats.find_repeated_items(self.incidents),
+            [("이메일", ["가상은행", "가상쇼핑"])],
+        )
+
+    def test_items_are_counted_most_leaked_first(self):
+        self.assertEqual(stats.count_items(self.incidents)[0], ("이메일", 3))
+
+    def test_grades_remaining_score_and_done_percent(self):
+        self.assertEqual(
+            stats.count_grades(self.incidents),
+            {"높음": 1, "보통": 1, "낮음": 1},
+        )
+
+        # 9점(모두 남음) + 4점의 절반 + 0점(모두 끝냄)
+        self.assertEqual(stats.sum_remaining_scores(self.incidents), 11)
+
+        # 할 일 6개 중 2개를 끝냈다.
+        self.assertEqual(stats.get_done_percent(self.incidents), 33)
+        self.assertEqual(stats.get_done_percent([]), 0)
+
+
+class PlayTest(unittest.TestCase):
+    def attack_names(self, items):
+        return [attack["name"] for attack in play.find_attacks(items)]
+
+    def test_attack_needs_every_item(self):
+        self.assertEqual(self.attack_names(["이름"]), [])
+        self.assertEqual(self.attack_names(["이름", "전화번호"]), ["sms", "call"])
+        self.assertEqual(self.attack_names(["주민등록번호"]), ["rrn"])
+        self.assertEqual(len(play.find_attacks(list(rules.ITEM_WEIGHTS))), len(play.ATTACKS))
+
+    def test_quiz_puts_my_leaked_items_first(self):
+        order = play.order_quiz(["비밀번호"])
+
+        self.assertEqual(order[:2], [3, 4])
+        self.assertEqual(sorted(order), list(range(len(play.QUIZ))))
+        self.assertEqual(play.order_quiz([]), list(range(len(play.QUIZ))))
+
+    def test_every_attack_and_question_has_text(self):
+        # 문구가 하나라도 빠지면 체험하기 화면이 멈춘다.
+        for attack in play.ATTACKS:
+            self.assertIn(f"attack_{attack['name']}_title", TEXT)
+            self.assertIn(f"attack_{attack['name']}_body", TEXT)
+
+            for item in attack["needs"]:
+                self.assertIn(item, rules.ITEM_WEIGHTS)
+
+        for number, question in enumerate(play.QUIZ, start=1):
+            self.assertIn(f"quiz{number}_message", TEXT)
+            self.assertIn(f"quiz{number}_reason", TEXT)
+            self.assertIn(question["item"], rules.ITEM_WEIGHTS)
 
 
 class DatabaseTest(unittest.TestCase):
@@ -222,6 +341,97 @@ class DatabaseTest(unittest.TestCase):
             database.get_incidents()[0]["notified_date"],
             self.today.isoformat(),
         )
+
+    def test_update_recalculates_and_keeps_done_actions(self):
+        self.add_sample_record()
+        incident = database.get_incidents()[0]
+
+        # 첫 번째 할 일(이 서비스의 비밀번호 바꾸기)을 끝낸다.
+        count = len(incident["actions"])
+        done_one = rules.update_action_states(
+            incident["actions"], [True] + [False] * (count - 1), "2026-11-10"
+        )
+        database.save_actions(incident["id"], done_one)
+
+        status = database.update_record(
+            incident["id"],
+            "가상커피",
+            "기타",
+            "고친 메모",
+            self.today,
+            ["비밀번호", "주민등록번호"],
+            500,
+        )
+
+        self.assertEqual(status, "SUCCESS")
+
+        saved = database.get_incidents()[0]
+
+        self.assertEqual(saved["service_name"], "가상커피")
+        self.assertEqual(saved["category"], "기타")
+        self.assertEqual(saved["memo"], "고친 메모")
+        self.assertEqual(saved["leak_size"], 500)
+        self.assertEqual(saved["risk_score"], 8)
+        self.assertEqual(
+            [action["name"] for action in saved["actions"]],
+            rules.make_actions(["비밀번호", "주민등록번호"]),
+        )
+
+        # 이미 끝낸 일은 그대로이고, 새로 생긴 일은 남아 있다.
+        self.assertEqual(saved["actions"][0]["done_date"], "2026-11-10")
+        self.assertIn(TEXT["act_identity"], [a["name"] for a in saved["actions"] if not a["done"]])
+        self.assertEqual(saved["resolved"], 0)
+
+    def test_update_rejects_bad_input_and_taken_name(self):
+        self.add_sample_record()
+        database.add_record("가상은행", "금융", "", self.today, ["계좌번호"], 0)
+        incident = database.get_incidents("커피")[0]
+
+        self.assertEqual(
+            database.update_record(incident["id"], "가상은행", "쇼핑", "", self.today, ["이름"], 0),
+            "DUPLICATE",
+        )
+        self.assertEqual(
+            database.update_record(incident["id"], "가상커피 멤버십", "쇼핑", "", self.today, [], 0),
+            "NO_ITEMS",
+        )
+        self.assertEqual(
+            database.update_record(9999, "없는 기록", "쇼핑", "", self.today, ["이름"], 0),
+            "NOT_FOUND",
+        )
+
+        # 고치지 못했으면 기록은 그대로다.
+        unchanged = database.get_incidents("커피")[0]
+
+        self.assertEqual(unchanged["service_name"], "가상커피 멤버십")
+        self.assertEqual(unchanged["leaked_items"], ["비밀번호", "전화번호", "이메일"])
+
+    def test_delete_removes_service_only_with_its_last_record(self):
+        self.add_sample_record()
+        self.add_sample_record()
+        first, second = database.get_incidents()
+
+        database.delete_record(first["id"])
+
+        self.assertEqual(len(database.get_incidents()), 1)
+        self.assertEqual(database.get_recorded_names(), {"가상커피 멤버십"})
+
+        database.delete_record(second["id"])
+
+        self.assertEqual(database.get_incidents(), [])
+        self.assertEqual(database.get_recorded_names(), set())
+
+        # 이미 지운 기록을 다시 지워도 오류가 나지 않는다.
+        database.delete_record(second["id"])
+
+    def test_quiz_summary_keeps_best_score_and_count(self):
+        self.assertEqual(database.get_quiz_summary(), (None, 0))
+
+        database.add_quiz_result(5, 8)
+        database.add_quiz_result(7, 8)
+        database.add_quiz_result(6, 8)
+
+        self.assertEqual(database.get_quiz_summary(), (7, 3))
 
 
 class ApiTest(unittest.TestCase):

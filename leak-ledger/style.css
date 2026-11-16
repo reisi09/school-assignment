@@ -136,6 +136,29 @@
   background: var(--fill);
 }
 
+/* 소개 화면에서 체험하기를 알리는 구역: 남색 바탕에 흰 글자, 버튼은 민트 */
+.st-key-sec_play {
+  background: var(--navy);
+  gap: 2rem;
+}
+
+.st-key-sec_play .title {
+  color: #ffffff;
+}
+
+.st-key-sec_play .lead {
+  color: #d4d4d4;
+}
+
+.st-key-sec_play [data-testid="stBaseButton-primary"],
+.st-key-sec_play [data-testid="stBaseButton-primary"]:hover {
+  min-height: 3rem;
+  padding: 0 1.75rem;
+  background-color: var(--mint);
+  border-color: var(--mint);
+  color: var(--ink);
+}
+
 /* 기록하기와 할 일 화면. 카드 줄 사이는 1.5rem 띄운다. */
 .st-key-sec_page {
   min-height: calc(100vh - 4rem);
@@ -504,6 +527,304 @@
   color: var(--muted);
 }
 
+/* ---------- 할 일·통계·체험하기 화면의 조각 ---------- */
+
+/* 경고 상자 제목 앞의 빨간 점 */
+.dot-red {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: #e40014;
+  vertical-align: middle;
+}
+
+/* 막대그래프: 이름, 막대, 건수를 한 줄에 둔다. */
+.bars {
+  display: grid;
+  gap: 0.625rem;
+  margin-top: 1rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.bar-row span {
+  overflow-wrap: anywhere;
+}
+
+.bar-row strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+.bar {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.bar div {
+  height: 100%;
+  border-radius: 999px;
+  transform-origin: left;
+  animation: grow 0.5s ease-out;
+}
+
+.bar-red { background: #e40014; }
+.bar-yellow { background: #ffd21f; }
+.bar-navy { background: var(--navy); }
+.bar-mint { background: var(--mint); }
+
+/* 해커 시점 체험: 공격자가 할 수 있는 일이 한 줄씩 아래에서 올라오며 나타난다. */
+.attacks {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.attack {
+  display: flex;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: #ffffff;
+  animation: rise 0.35s ease-out both;
+}
+
+.attack:nth-child(2) { animation-delay: 0.07s; }
+.attack:nth-child(3) { animation-delay: 0.14s; }
+.attack:nth-child(n + 4) { animation-delay: 0.21s; }
+
+.attack .step-number {
+  flex: none;
+  margin-bottom: 0;
+  background: #e40014;
+  color: #ffffff;
+}
+
+.attack h3 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.attack p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.attack-needs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.attack-needs .chips {
+  margin-top: 0;
+}
+
+/* 해커 시점 체험의 남색 카드: 위험 점수, 막대, 해야 할 일 */
+.score-card {
+  position: sticky;
+  top: 5.5rem;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  background: var(--navy);
+  color: #ffffff;
+}
+
+.score-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.score-number {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.score-number b {
+  font-size: clamp(3.5rem, 7vw, 5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--mint);
+}
+
+.score-number > span:not(.pill) {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.score-number .pill {
+  align-self: center;
+  margin-left: auto;
+}
+
+/* 남색 카드 위에서는 남색 알약이 보이지 않으니 흰색으로 바꾼다. */
+.score-card .pill-navy {
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.meter {
+  height: 0.5rem;
+  margin-top: 1.25rem;
+  border-radius: 999px;
+  background: #2a3245;
+  overflow: hidden;
+}
+
+.meter div {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--mint);
+  transform-origin: left;
+  animation: grow 0.4s ease-out;
+}
+
+.score-card h3 {
+  margin: 1.75rem 0 0.75rem;
+  padding: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.score-card ul {
+  margin: 0;
+  padding-left: 1.125rem;
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: #d4d4d4;
+}
+
+/* 사칭 문자 가려내기: 문자 예시는 말풍선 모양이고 줄바꿈을 그대로 보여 준다. */
+.st-key-card_quiz {
+  max-width: 44rem;
+}
+
+.sms-head {
+  margin-top: 1.25rem;
+}
+
+.sms {
+  max-width: 26rem;
+  margin-top: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+  background: var(--fill);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.quiz-message {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+/* 결과 화면에서는 점수 설명과 한마디 사이를 띄운다. */
+.card-meta + .quiz-message {
+  margin-top: 1rem;
+}
+
+.quiz-score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.quiz-score b {
+  font-size: clamp(3.5rem, 7vw, 5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.quiz-score span {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* 할 일을 모두 끝냈을 때 위에서 떨어지는 색종이 조각 */
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: -1.5rem;
+  width: 0.5rem;
+  height: 1rem;
+  border-radius: 0.125rem;
+  animation: fall 1.8s ease-in forwards;
+}
+
+.confetti-mint { background: var(--mint); }
+.confetti-navy { background: var(--navy); }
+.confetti-yellow { background: #ffd21f; }
+.confetti-red { background: #e40014; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes fall {
+  to { transform: translateY(110vh) rotate(540deg); }
+}
+
+/* 움직임을 줄이도록 설정한 사람에게는 움직이는 효과를 보여 주지 않는다. */
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
+
+  .attack,
+  .bar div,
+  .meter div {
+    animation: none;
+  }
+}
+
 /* ---------- 버튼과 입력 ---------- */
 
 /* 버튼은 모두 알약 모양이고 14px 굵은 글자다. */
@@ -565,8 +886,11 @@
   border: none;
 }
 
-/* 고르는 스위치: 칸마다 떨어진 알약 모양이고, 고른 칸은 민트 바탕이다. */
-[data-testid="stButtonGroup"] [role="radiogroup"] {
+/* 고르는 스위치: 칸마다 떨어진 알약 모양이고, 고른 칸은 민트 바탕이다.
+   하나만 고르는 스위치는 radiogroup, 여러 개 고르는 스위치는 toolbar로 그려진다. */
+[data-testid="stButtonGroup"] [role="radiogroup"],
+[data-testid="stButtonGroup"] [role="toolbar"] {
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -585,12 +909,14 @@
   color: var(--muted) !important;
 }
 
-[data-testid="stButtonGroup"] button[aria-checked="true"] {
+[data-testid="stButtonGroup"] button[aria-checked="true"],
+[data-testid="stButtonGroup"] button[aria-pressed="true"] {
   border-color: var(--mint) !important;
   background: var(--mint) !important;
 }
 
-[data-testid="stButtonGroup"] button[aria-checked="true"] p {
+[data-testid="stButtonGroup"] button[aria-checked="true"] p,
+[data-testid="stButtonGroup"] button[aria-pressed="true"] p {
   font-weight: 600;
   color: var(--ink) !important;
 }
@@ -674,5 +1000,13 @@ summary:focus-visible,
   .stats,
   .two {
     grid-template-columns: 1fr;
+  }
+
+  .bar-row {
+    grid-template-columns: 5rem 1fr 2.5rem;
+  }
+
+  .score-card {
+    position: static;
   }
 }

@@ -1,5 +1,5 @@
 # database.py
-# 서비스(services)와 유출 기록(incidents)을 SQLite에 저장한다.
+# 서비스(services), 유출 기록(incidents), 사칭 문자 가려내기 결과(quiz_results)를 SQLite에 저장한다.
 # 서비스 하나에 유출 기록이 여러 건 달릴 수 있다.
 
 import json
@@ -35,7 +35,7 @@ def connect_db():
 
 
 def create_tables():
-    """서비스와 유출 기록 테이블을 생성한다."""
+    """테이블 세 개를 생성한다."""
     conn = connect_db()
 
     try:
@@ -73,22 +73,30 @@ def create_tables():
             """
         )
 
+        # 사칭 문자 가려내기를 한 번 끝낼 때마다 한 줄씩 쌓인다.
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS quiz_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                score INTEGER NOT NULL,
+                total INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
         conn.commit()
 
     finally:
         conn.close()
 
 
-def add_record(name, category, memo, notified_date, items, leak_size):
+def check_record(name, items, notified_date):
     """
-    유출 알림 한 건을 기록한다. 위험 점수와 할 일은 코드가 계산한다.
-    처음 적는 서비스면 서비스도 함께 등록한다.
+    기록에 넣을 값이 올바른지 확인한다.
 
     반환값: SUCCESS / EMPTY(빈 이름) / NO_ITEMS(유출된 정보 없음) / FUTURE_DATE(오늘 이후 날짜)
     """
-    name = name.strip()
-    memo = memo.strip()
-
     if name == "":
         return "EMPTY"
 
@@ -97,6 +105,24 @@ def add_record(name, category, memo, notified_date, items, leak_size):
 
     if notified_date > today_kst():
         return "FUTURE_DATE"
+
+    return "SUCCESS"
+
+
+def add_record(name, category, memo, notified_date, items, leak_size):
+    """
+    유출 알림 한 건을 기록한다. 위험 점수와 할 일은 코드가 계산한다.
+    처음 적는 서비스면 서비스도 함께 등록한다.
+
+    반환값: SUCCESS / EMPTY / NO_ITEMS / FUTURE_DATE (check_record 참고)
+    """
+    name = name.strip()
+    memo = memo.strip()
+
+    status = check_record(name, items, notified_date)
+
+    if status != "SUCCESS":
+        return status
 
     actions = []
 
@@ -182,6 +208,127 @@ def add_case(case):
         case["items"],
         case["size"],
     )
+
+
+def update_record(incident_id, name, category, memo, notified_date, items, leak_size):
+    """
+    기록 한 건을 고친다. 위험 점수와 할 일을 다시 정하고, 이미 끝낸 할 일은 그대로 둔다.
+    서비스의 이름·분류·메모도 함께 바꾼다.
+
+    반환값: SUCCESS / EMPTY / NO_ITEMS / FUTURE_DATE
+            DUPLICATE(다른 서비스가 쓰는 이름) / NOT_FOUND(이미 지워진 기록)
+    """
+    name = name.strip()
+    memo = memo.strip()
+
+    status = check_record(name, items, notified_date)
+
+    if status != "SUCCESS":
+        return status
+
+    conn = connect_db()
+
+    try:
+        row = conn.execute(
+            "SELECT service_id, actions FROM incidents WHERE id = ?",
+            (incident_id,),
+        ).fetchone()
+
+        if row is None:
+            return "NOT_FOUND"
+
+        service_id = row["service_id"]
+
+        # 다른 서비스가 같은 이름을 쓰고 있으면 바꿀 수 없다.
+        other = conn.execute(
+            "SELECT id FROM services WHERE name = ? AND id != ?",
+            (name, service_id),
+        ).fetchone()
+
+        if other is not None:
+            return "DUPLICATE"
+
+        # 지금까지의 할 일을 이름으로 찾을 수 있게 담아 둔다.
+        old_actions = {}
+
+        for action in json.loads(row["actions"]):
+            old_actions[action["name"]] = action
+
+        # 바뀐 정보로 할 일을 다시 정한다. 이름이 같은 할 일은 끝낸 상태를 그대로 둔다.
+        actions = []
+        resolved = 1
+
+        for action_name in make_actions(items):
+            if action_name in old_actions:
+                action = old_actions[action_name]
+            else:
+                action = {"name": action_name, "done": False, "done_date": None}
+
+            if not action["done"]:
+                resolved = 0
+
+            actions.append(action)
+
+        conn.execute(
+            "UPDATE services SET name = ?, category = ?, memo = ? WHERE id = ?",
+            (name, category, memo, service_id),
+        )
+        conn.execute(
+            """
+            UPDATE incidents
+            SET leaked_items = ?, risk_score = ?, leak_size = ?,
+                notified_date = ?, actions = ?, resolved = ?
+            WHERE id = ?
+            """,
+            (
+                ",".join(items),
+                calc_risk_score(items),
+                leak_size,
+                notified_date.isoformat(),
+                json.dumps(actions, ensure_ascii=False),
+                resolved,
+                incident_id,
+            ),
+        )
+
+        conn.commit()
+
+    finally:
+        conn.close()
+
+    return "SUCCESS"
+
+
+def delete_record(incident_id):
+    """기록 한 건을 지운다. 그 서비스에 남은 기록이 없으면 서비스도 지운다."""
+    conn = connect_db()
+
+    try:
+        row = conn.execute(
+            "SELECT service_id FROM incidents WHERE id = ?",
+            (incident_id,),
+        ).fetchone()
+
+        # 이미 지워진 기록이면 할 일이 없다.
+        if row is None:
+            return
+
+        service_id = row["service_id"]
+
+        conn.execute("DELETE FROM incidents WHERE id = ?", (incident_id,))
+
+        left = conn.execute(
+            "SELECT COUNT(*) AS count FROM incidents WHERE service_id = ?",
+            (service_id,),
+        ).fetchone()
+
+        if left["count"] == 0:
+            conn.execute("DELETE FROM services WHERE id = ?", (service_id,))
+
+        conn.commit()
+
+    finally:
+        conn.close()
 
 
 def get_recorded_names():
@@ -275,6 +422,41 @@ def save_pwned_count(incident_id, count):
         )
 
         conn.commit()
+
+    finally:
+        conn.close()
+
+
+def add_quiz_result(score, total):
+    """사칭 문자 가려내기 결과(맞힌 개수, 문제 수)를 저장한다."""
+    conn = connect_db()
+
+    try:
+        conn.execute(
+            "INSERT INTO quiz_results (score, total, created_at) VALUES (?, ?, ?)",
+            (score, total, now_kst()),
+        )
+
+        conn.commit()
+
+    finally:
+        conn.close()
+
+
+def get_quiz_summary():
+    """
+    사칭 문자 가려내기 결과를 요약한다.
+
+    반환값: (최고 점수, 푼 횟수). 아직 푼 적이 없으면 최고 점수는 None이다.
+    """
+    conn = connect_db()
+
+    try:
+        row = conn.execute(
+            "SELECT MAX(score) AS best, COUNT(*) AS count FROM quiz_results"
+        ).fetchone()
+
+        return row["best"], row["count"]
 
     finally:
         conn.close()
