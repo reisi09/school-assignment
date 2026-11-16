@@ -1,6 +1,7 @@
 # play.py
-# 체험하기 화면에 쓰는 자료와 계산
+# 공격 수법과 문제 자료, 그 자료로 하는 계산
 #   해커 시점 체험: 유출된 정보로 공격자가 할 수 있는 일
+#   할 일: 할 일을 끝내면 막히는 공격
 #   사칭 문자 가려내기: 문자 예시와 정답
 # 화면에 나오는 문구는 texts.py에 있다.
 
@@ -37,6 +38,29 @@ def find_attacks(items):
             found.append(attack)
 
     return found
+
+
+# 할 일의 종류(rules.py의 MISSION_TYPES)마다 끝내면 막히는 공격
+# 확인만 하는 할 일(lookup, account)은 막는 공격이 없다.
+MISSION_BLOCKS = {
+    "password": ["pw", "birth"],
+    "reuse": ["pw", "id"],
+    "otp": ["pw", "id", "birth"],
+    "quiz": ["sms", "call", "mail", "address", "account"],
+    "fss": ["idcard"],
+    "identity": ["rrn"],
+}
+
+
+def find_blocked_attacks(mission_type, items):
+    """유출된 정보(items)로 가능한 공격 중에서 이 종류의 할 일을 끝내면 막히는 공격을 찾는다."""
+    blocked = []
+
+    for attack in find_attacks(items):
+        if attack["name"] in MISSION_BLOCKS.get(mission_type, []):
+            blocked.append(attack)
+
+    return blocked
 
 
 # ---------- 사칭 문자 가려내기 ----------

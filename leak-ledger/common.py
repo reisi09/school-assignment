@@ -1,11 +1,14 @@
 # common.py
 # 여러 화면이 함께 쓰는 값과 함수. 아래 순서로 들어 있다.
-#   1. 화면 조각을 만드는 함수   HTML 글자를 만들어 돌려준다 (esc, pill, chips, ...)
+#   1. 화면 조각을 만드는 함수   HTML 글자를 만들어 돌려준다 (esc, pill, chips, gauge, phone, ...)
 #   2. 화면을 옮기는 함수         go_to, record_case
 #   3. 함께 쓰는 화면 부분        화면 제목, 기록이 없을 때의 안내, 실제 사례 카드
 #
 # 사용자가 입력한 글자는 esc()로 바꿔서 HTML에 넣는다.
 # 그대로 넣으면 입력한 글자가 HTML 태그로 동작할 수 있기 때문이다.
+#
+# 움직임은 모두 style.css가 그린다. 여기서는 style="--from: 3; --to: 1"처럼
+# 움직이기 전 값(--from)과 움직인 뒤 값(--to)만 HTML에 적어 준다.
 
 import html
 
@@ -31,6 +34,13 @@ GRADE_PILLS = {
     "높음": ("red", T["risk_high"]),
     "보통": ("yellow", T["risk_mid"]),
     "낮음": ("navy", T["risk_low"]),
+}
+
+# 계기판 색: 위험이 낮으면 민트, 보통이면 노랑, 높으면 빨강
+GAUGE_TONES = {
+    "높음": "red",
+    "보통": "yellow",
+    "낮음": "mint",
 }
 REGION_NAMES = {
     "국내": T["case_group_domestic"],
@@ -80,16 +90,112 @@ def spec_row(label, value):
     return f'<div class="spec"><span>{esc(label)}</span><strong>{value}</strong></div>'
 
 
-def progress_bar(text, done, total):
-    """진행 정도를 글자와 막대로 만든다."""
-    percent = 0
+def percent_of(part, whole):
+    """part가 whole의 몇 %인지 0~100 사이 정수로 돌려준다."""
+    if whole <= 0:
+        return 0
 
-    if total > 0:
-        percent = round(done / total * 100)
+    return min(100, round(part / whole * 100))
+
+
+def progress_bar(text, done, total, previous=None):
+    """
+    진행 정도를 글자와 막대로 만든다.
+
+    previous를 주면 막대가 previous에서 done까지 늘어나거나 줄어드는 움직임이 있다.
+    """
+    if previous is None:
+        previous = done
 
     return (
         f'<p class="progress-text">{esc(text)}</p>'
-        f'<div class="progress"><div style="width: {percent}%"></div></div>'
+        f'<div class="progress"><div style="--from: {percent_of(previous, total)}%; '
+        f'--to: {percent_of(done, total)}%"></div></div>'
+    )
+
+
+def count_number(value, previous):
+    """
+    숫자를 보여 준다. 나타날 때 previous에서 value까지 숫자가 바뀌며 움직인다.
+
+    움직이는 숫자는 CSS가 그리고, 화면 읽기 프로그램은 안쪽의 진짜 숫자를 읽는다.
+    """
+    return (
+        f'<span class="count" style="--from: {previous}; --to: {value}">'
+        f'<span class="sr-only">{value}</span></span>'
+    )
+
+
+def gauge(value, previous, maximum):
+    """
+    위험 점수 계기판을 만든다. 바늘과 색 띠가 previous에서 value까지 움직인다.
+
+    maximum은 계기판이 가득 찼을 때의 점수다.
+    """
+    now = percent_of(value, maximum)
+    before = percent_of(previous, maximum)
+
+    # 점수가 오르면 계기판이 흔들리고, 내려가면 민트색으로 빛난다.
+    move = ""
+
+    if value > previous:
+        move = " is-up"
+    elif value < previous:
+        move = " is-down"
+
+    tone = GAUGE_TONES[get_risk_grade(value)]
+
+    # 반원 띠는 0~100 중 --to만큼 칠하고, 바늘은 왼쪽 끝(0)에서 오른쪽 끝(100) 사이를 돈다.
+    # 그림은 style.css의 .gauge-dial이 그린다. (Streamlit은 HTML 안의 SVG 그림을 지운다.)
+    return (
+        f'<div class="gauge gauge-{tone}{move}" style="--from: {before}; --to: {now}">'
+        '<div class="gauge-dial"><span class="gauge-needle"></span></div>'
+        f'<div class="gauge-number">{count_number(value, previous)}'
+        f"<span>{esc(T['score_unit'])}</span></div>"
+        "</div>"
+    )
+
+
+def icon(name):
+    """작은 그림(check, cross, question, lock)을 만든다. 모양은 style.css의 .icon-이름이 그린다."""
+    return f'<span class="icon icon-{name}" aria-hidden="true"></span>'
+
+
+def verdict(ok, text):
+    """
+    결과를 알리는 띠를 만든다.
+
+    ok가 True면 민트색 띠(맞음·막음), False면 빨간 띠(틀림·뚫림), None이면 회색 띠(모름)다.
+    """
+    if ok is None:
+        return f'<div class="verdict verdict-maybe">{icon("question")}<p>{esc(text)}</p></div>'
+
+    if ok:
+        return f'<div class="verdict verdict-ok">{icon("check")}<p>{esc(text)}</p></div>'
+
+    return f'<div class="verdict verdict-no">{icon("cross")}<p>{esc(text)}</p></div>'
+
+
+def stamp(text, tone):
+    """문자 위에 찍는 도장 모양 글자를 만든다. tone은 red 또는 mint."""
+    return f'<span class="stamp stamp-{tone}">{esc(text)}</span>'
+
+
+def phone(message, title, state="", mark=""):
+    """
+    가상 휴대전화 화면에 문자 한 통을 보여 준다.
+
+    state가 "is-arriving"이면 '입력 중' 점이 잠깐 보인 뒤 문자가 나타나고,
+    "is-wrong"이면 휴대전화가 흔들린다. mark는 문자 위에 찍을 도장(HTML)이다.
+    """
+    return (
+        f'<div class="phone {state}">'
+        '<div class="phone-bar"><span>9:41</span><span class="phone-signal"></span></div>'
+        f'<p class="phone-title">{esc(title)}</p>'
+        '<div class="phone-screen">'
+        '<div class="typing"><i></i><i></i><i></i></div>'
+        f'<div class="phone-sms">{esc(message)}{mark}</div>'
+        "</div></div>"
     )
 
 

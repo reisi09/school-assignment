@@ -50,20 +50,49 @@ class RulesTest(unittest.TestCase):
             rules.make_actions(items),
         )
 
-    def test_tc08_done_date_is_kept_and_cleared(self):
+    def test_finish_and_undo_change_only_one_action(self):
         actions = [
-            {"name": "A", "done": True, "done_date": "2026-11-04"},
+            {"name": "A", "done": True, "done_date": "2026-11-04", "result": "앞서 끝냄"},
             {"name": "B", "done": False, "done_date": None},
-            {"name": "C", "done": True, "done_date": "2026-11-05"},
         ]
 
-        updated = rules.update_action_states(
-            actions, [True, True, False], "2026-11-10"
+        finished = rules.finish_action(actions, 1, "2단계 인증을 켬", "2026-11-10")
+
+        self.assertEqual(finished[0], actions[0])
+        self.assertEqual(
+            finished[1],
+            {"name": "B", "done": True, "done_date": "2026-11-10", "result": "2단계 인증을 켬"},
         )
 
-        self.assertEqual(updated[0]["done_date"], "2026-11-04")
-        self.assertEqual(updated[1]["done_date"], "2026-11-10")
-        self.assertEqual(updated[2], {"name": "C", "done": False, "done_date": None})
+        # 원래 목록은 바뀌지 않는다.
+        self.assertFalse(actions[1]["done"])
+
+        undone = rules.undo_action(finished, 0)
+
+        self.assertEqual(undone[0], {"name": "A", "done": False, "done_date": None, "result": None})
+        self.assertEqual(undone[1], finished[1])
+
+    def test_password_rule_follows_kisa_kinds_and_length(self):
+        # 3종류 이상을 섞으면 8자, 2종류를 섞으면 10자가 기준이다.
+        self.assertTrue(rules.is_strong_password("abcdef1!"))
+        self.assertFalse(rules.is_strong_password("abcde1!"))
+        self.assertFalse(rules.is_strong_password("abcdefgh1"))
+        self.assertTrue(rules.is_strong_password("abcdefghi1"))
+
+        # 한 종류만 쓰면 길어도 기준에 못 미친다.
+        self.assertFalse(rules.is_strong_password("abcdefghijklmnop"))
+
+        # 한글과 띄어쓰기는 네 종류 어디에도 세지 않는다.
+        self.assertEqual(rules.count_char_kinds("Ab1!"), 4)
+        self.assertEqual(rules.count_char_kinds("가나다 라"), 0)
+
+    def test_every_action_opens_its_own_mission(self):
+        items = list(rules.ITEM_WEIGHTS) + ["차량번호"]
+        types = [rules.get_mission_type(name) for name in rules.make_actions(items)]
+
+        # 목록에 없는 정보(차량번호)의 할 일만 직접 적는 창(note)을 연다.
+        self.assertEqual(types.count("note"), 1)
+        self.assertEqual(len(set(types)), len(types))
 
     def test_remaining_score_shrinks_as_actions_are_done(self):
         self.assertEqual(rules.calc_remaining_score(6, 4, 4), 6)
@@ -167,6 +196,23 @@ class PlayTest(unittest.TestCase):
         self.assertEqual(order[:2], [3, 4])
         self.assertEqual(sorted(order), list(range(len(play.QUIZ))))
         self.assertEqual(play.order_quiz([]), list(range(len(play.QUIZ))))
+
+    def test_mission_blocks_only_attacks_possible_with_leaked_items(self):
+        def names(mission_type, items):
+            return [attack["name"] for attack in play.find_blocked_attacks(mission_type, items)]
+
+        # 이름과 생년월일이 함께 유출되지 않았으면 생일 추측 공격은 막을 것이 없다.
+        self.assertEqual(names("password", ["비밀번호", "이메일"]), ["pw"])
+        self.assertEqual(names("password", ["비밀번호", "이름", "생년월일"]), ["pw", "birth"])
+
+        # 확인만 하는 할 일은 막는 공격이 없다.
+        self.assertEqual(names("lookup", list(rules.ITEM_WEIGHTS)), [])
+
+        attack_names = [attack["name"] for attack in play.ATTACKS]
+
+        for blocked in play.MISSION_BLOCKS.values():
+            for name in blocked:
+                self.assertIn(name, attack_names)
 
     def test_every_attack_and_question_has_text(self):
         # 문구가 하나라도 빠지면 체험하기 화면이 멈춘다.
@@ -277,14 +323,16 @@ class DatabaseTest(unittest.TestCase):
         incident = database.get_incidents()[0]
         count = len(incident["actions"])
 
-        partly = rules.update_action_states(
-            incident["actions"], [True] + [False] * (count - 1), "2026-11-10"
-        )
+        partly = rules.finish_action(incident["actions"], 0, "결과", "2026-11-10")
         database.save_actions(incident["id"], partly)
 
         self.assertEqual(len(database.get_incidents(status="진행 중")), 1)
 
-        all_done = rules.update_action_states(partly, [True] * count, "2026-11-11")
+        all_done = partly
+
+        for index in range(1, count):
+            all_done = rules.finish_action(all_done, index, "결과", "2026-11-11")
+
         database.save_actions(incident["id"], all_done)
 
         self.assertEqual(database.get_incidents(status="진행 중"), [])
@@ -293,6 +341,7 @@ class DatabaseTest(unittest.TestCase):
 
         self.assertEqual(saved["actions"][0]["done_date"], "2026-11-10")
         self.assertEqual(saved["actions"][1]["done_date"], "2026-11-11")
+        self.assertEqual(saved["actions"][1]["result"], "결과")
 
     def test_pwned_count_is_saved(self):
         self.add_sample_record()
@@ -347,9 +396,8 @@ class DatabaseTest(unittest.TestCase):
         incident = database.get_incidents()[0]
 
         # 첫 번째 할 일(이 서비스의 비밀번호 바꾸기)을 끝낸다.
-        count = len(incident["actions"])
-        done_one = rules.update_action_states(
-            incident["actions"], [True] + [False] * (count - 1), "2026-11-10"
+        done_one = rules.finish_action(
+            incident["actions"], 0, "기준에 맞게 비밀번호 바꿈", "2026-11-10"
         )
         database.save_actions(incident["id"], done_one)
 
@@ -379,6 +427,7 @@ class DatabaseTest(unittest.TestCase):
 
         # 이미 끝낸 일은 그대로이고, 새로 생긴 일은 남아 있다.
         self.assertEqual(saved["actions"][0]["done_date"], "2026-11-10")
+        self.assertEqual(saved["actions"][0]["result"], "기준에 맞게 비밀번호 바꿈")
         self.assertIn(TEXT["act_identity"], [a["name"] for a in saved["actions"] if not a["done"]])
         self.assertEqual(saved["resolved"], 0)
 

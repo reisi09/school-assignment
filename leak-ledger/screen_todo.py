@@ -1,6 +1,7 @@
 # screen_todo.py
 # 할 일 화면: 기록마다 카드 하나를 보여 준다.
-# 카드에서 할 일을 체크하고, 비밀번호를 확인하고, 기록을 고치거나 지운다.
+# 카드에서 할 일을 하나씩 직접 해 보고(screen_missions.py의 창), 비밀번호를 확인하고,
+# 기록을 고치거나 지운다.
 
 from datetime import date
 
@@ -13,6 +14,8 @@ from common import (
     chips,
     confetti,
     esc,
+    gauge,
+    icon,
     pill,
     progress_bar,
     repeat_box,
@@ -25,33 +28,15 @@ from common import (
 from database import (
     delete_record,
     get_incidents,
-    save_actions,
     save_pwned_count,
     today_kst,
     update_record,
 )
-from rules import ITEM_WEIGHTS, update_action_states
+from play import find_blocked_attacks
+from rules import ITEM_WEIGHTS, get_mission_type
+from screen_missions import clear_mission_state, show_mission
 from stats import count_all_remaining, count_remaining, get_remaining_score
 from texts import TEXT as T
-
-
-def save_checked_actions(incident):
-    """체크 상자를 누르면 그 기록의 할 일 상태를 바로 저장한다."""
-    done_flags = []
-
-    for action in incident["actions"]:
-        done_flags.append(st.session_state[f"action_{incident['id']}_{action['name']}"])
-
-    actions = update_action_states(
-        incident["actions"],
-        done_flags,
-        today_kst().isoformat(),
-    )
-    save_actions(incident["id"], actions)
-
-    # 할 일을 모두 끝냈으면 다음 화면에서 축하 표시를 보여 준다.
-    if all(done_flags):
-        st.session_state["cheer"] = incident["service_name"]
 
 
 def save_edit(incident):
@@ -200,10 +185,93 @@ def show_edit_form(incident):
         )
 
 
-def show_incident_card(incident):
-    """기록 하나를 카드로 보여 준다. 할 일을 체크하면 남은 위험 점수가 줄어든다."""
+def mission_row(number, action, blocked, flash):
+    """
+    할 일 한 줄을 만든다. 번호(끝냈으면 체크 표시), 할 일 이름, 결과, 막는 공격 이름표가 있다.
+
+    flash가 True면 방금 끝낸 줄이라 한 번 반짝인다.
+    """
+    classes = "mission-row"
+
+    if action["done"]:
+        classes += " is-done"
+        mark = f'<span class="mission-mark">{icon("check")}</span>'
+        result = action.get("result") or T["pill_done"]
+        line = T["mission_done_line"].format(date=action["done_date"], result=result)
+        sub = f'<p class="mission-sub">{esc(line)}</p>'
+        label = T["mission_blocked_label"]
+    else:
+        mark = f'<span class="mission-mark">{number}</span>'
+        sub = ""
+        label = T["mission_blocks_label"]
+
+    if flash:
+        classes += " just-done"
+
+    tags = ""
+
+    for attack in blocked:
+        tags += f'<span class="attack-tag">{esc(T["attack_" + attack["name"] + "_title"])}</span>'
+
+    if tags != "":
+        tags = f'<div class="mission-tags"><span>{esc(label)}</span>{tags}</div>'
+
+    return (
+        f'<div class="{classes}">{mark}'
+        f'<div><p class="mission-name">{esc(action["name"])}</p>{sub}{tags}</div></div>'
+    )
+
+
+def show_mission_rows(incident, just_done):
+    """
+    할 일마다 한 줄과 버튼을 보여 준다. 버튼을 누르면 그 할 일을 해 보는 창이 열린다.
+
+    just_done은 방금 끝낸 할 일의 "기록번호_할일순서"다. 아직 안 끝낸 첫 할 일은 눈에 띄게 한다.
+    """
+    next_marked = False
+
+    for index, action in enumerate(incident["actions"]):
+        row_id = f"{incident['id']}_{index}"
+        blocked = find_blocked_attacks(get_mission_type(action["name"]), incident["leaked_items"])
+
+        # key가 mnext_로 시작하는 줄은 style.css에서 버튼이 숨 쉬듯 빛난다.
+        if not action["done"] and not next_marked:
+            row_key = "mnext_" + row_id
+            button_type = "primary"
+            next_marked = True
+        else:
+            row_key = "mrow_" + row_id
+            button_type = "secondary"
+
+        if action["done"]:
+            label = T["mission_review"]
+        else:
+            label = T["mission_start"]
+
+        # wrap=False: 글이 길어도 버튼이 아랫줄로 내려가지 않고 오른쪽에 붙어 있다.
+        with st.container(key=row_key, horizontal=True, vertical_alignment="center", wrap=False):
+            st.html(mission_row(index + 1, action, blocked, just_done == row_id), width="stretch")
+
+            if st.button(label, key="mission_" + row_id, type=button_type):
+                # 창을 열 때마다 처음부터 시작한다.
+                clear_mission_state("m_" + row_id)
+                show_mission(incident, index)
+
+
+def show_incident_card(incident, just_done):
+    """기록 하나를 카드로 보여 준다. 할 일을 끝낼수록 계기판의 남은 위험 점수가 줄어든다."""
     total = len(incident["actions"])
     done = total - count_remaining(incident)
+
+    # 지난번에 보여 준 점수와 끝낸 수를 기억해 두고, 거기서 지금 값까지 계기판과 막대가 움직인다.
+    # 처음 볼 때는 처음 위험 점수에서 남은 위험 점수까지 바늘이 내려온다.
+    remaining = get_remaining_score(incident)
+    score_key = f"shown_score_{incident['id']}"
+    done_key = f"shown_done_{incident['id']}"
+    previous_score = st.session_state.get(score_key, incident["risk_score"])
+    previous_done = st.session_state.get(done_key, 0)
+    st.session_state[score_key] = remaining
+    st.session_state[done_key] = done
 
     if incident["resolved"]:
         state_pill = pill(T["pill_done"], "mint")
@@ -231,27 +299,20 @@ def show_incident_card(incident):
             f'<p class="card-meta">{esc(meta)}</p>'
             + chips(incident["leaked_items"])
             + memo
-            + '<div class="figure">'
-            f"<b>{get_remaining_score(incident)}{esc(T['score_unit'])}</b>"
-            f"<span>{esc(T['card_risk_label'].format(score=incident['risk_score']))}</span></div>"
-            + progress_bar(T["card_progress"].format(done=done, total=total), done, total)
+            + '<div class="card-gauge">'
+            + gauge(remaining, previous_score, incident["risk_score"])
+            + '<div class="card-gauge-text">'
+            + f'<p class="card-gauge-label">{esc(T["card_risk_label"].format(score=incident["risk_score"]))}</p>'
+            + progress_bar(
+                T["card_progress"].format(done=done, total=total),
+                done,
+                total,
+                previous_done,
+            )
+            + "</div></div>"
         )
 
-        # 체크하면 바로 저장된다.
-        # key에 할 일 이름을 넣어서, 기록을 고쳐 할 일의 순서가 바뀌어도 체크가 따라간다.
-        for action in incident["actions"]:
-            label = action["name"]
-
-            if action["done"]:
-                label += " " + T["done_suffix"].format(date=action["done_date"])
-
-            st.checkbox(
-                label,
-                value=action["done"],
-                key=f"action_{incident['id']}_{action['name']}",
-                on_change=save_checked_actions,
-                args=(incident,),
-            )
+        show_mission_rows(incident, just_done)
 
         show_password_check(incident)
         show_edit_form(incident)
@@ -276,6 +337,13 @@ def show_todo():
         if "cheer" in st.session_state:
             notice_area.success(T["todo_cheer"].format(name=st.session_state.pop("cheer")))
             notice_area.html(confetti())
+
+        # 할 일을 끝내거나 되돌렸으면 화면 구석에 알림을 잠깐 띄운다.
+        if "mission_toast" in st.session_state:
+            st.toast(st.session_state.pop("mission_toast"), icon=":material/verified_user:")
+
+        # 방금 끝낸 할 일 줄을 한 번만 반짝이게 꺼내 둔다.
+        just_done = st.session_state.pop("just_done", None)
 
         if len(all_incidents) == 0:
             show_empty(T["todo_empty"])
@@ -330,7 +398,7 @@ def show_todo():
 
                 for column, incident in zip(columns, incidents[start : start + 2]):
                     with column:
-                        show_incident_card(incident)
+                        show_incident_card(incident, just_done)
 
         # 신고하거나 상담받을 곳
         st.html(

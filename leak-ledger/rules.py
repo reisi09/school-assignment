@@ -3,6 +3,7 @@
 # 점수는 할 일의 순서를 정하기 위한 앱 자체 기준이며 공식 위험 등급이 아니다.
 
 import math
+import string
 
 from texts import TEXT
 
@@ -150,30 +151,97 @@ def make_actions(items):
     return actions
 
 
-def update_action_states(actions, done_flags, today):
-    """
-    체크 결과(done_flags)를 할 일 목록에 반영한다.
+# 할 일마다 '해 보기' 창의 종류를 정한다. screen_missions.py가 종류에 맞는 창을 연다.
+# 목록에 없는 할 일(직접 확인하기: ...)은 "note"다.
+MISSION_TYPES = {
+    TEXT["act_pw_change"]: "password",
+    TEXT["act_pw_other"]: "reuse",
+    TEXT["act_2fa"]: "otp",
+    TEXT["act_phishing"]: "quiz",
+    TEXT["act_account"]: "account",
+    TEXT["act_fss"]: "fss",
+    TEXT["act_identity"]: "identity",
+    TEXT["act_lookup"]: "lookup",
+}
 
-    새로 끝낸 일에는 오늘 날짜를 남기고,
-    이미 끝낸 일은 처음 끝낸 날짜를 유지하며,
-    체크를 푼 일은 날짜를 지운다.
+
+def get_mission_type(action_name):
+    """할 일 이름으로 '해 보기' 창의 종류를 찾는다."""
+    return MISSION_TYPES.get(action_name, "note")
+
+
+def finish_action(actions, index, result, today):
+    """
+    할 일 하나(index번째)를 끝낸 상태로 바꾼 새 목록을 돌려준다.
+
+    result는 해 보기 창에서 나온 결과 한 줄이고, today는 끝낸 날짜다.
     """
     updated = []
 
-    for action, done in zip(actions, done_flags):
-        if not done:
-            done_date = None
-        elif action["done"]:
-            done_date = action["done_date"]
-        else:
-            done_date = today
-
-        updated.append(
-            {
+    for position, action in enumerate(actions):
+        if position == index:
+            action = {
                 "name": action["name"],
-                "done": done,
-                "done_date": done_date,
+                "done": True,
+                "done_date": today,
+                "result": result,
             }
-        )
+
+        updated.append(action)
 
     return updated
+
+
+def undo_action(actions, index):
+    """끝낸 할 일 하나(index번째)를 다시 안 끝낸 상태로 바꾼 새 목록을 돌려준다."""
+    updated = []
+
+    for position, action in enumerate(actions):
+        if position == index:
+            action = {"name": action["name"], "done": False, "done_date": None, "result": None}
+
+        updated.append(action)
+
+    return updated
+
+
+def count_char_kinds(password):
+    """
+    비밀번호에 섞인 문자 종류(영문 대문자, 영문 소문자, 숫자, 특수문자)의 수를 센다.
+
+    특수문자는 키보드의 기호(string.punctuation)만 센다. 한글과 띄어쓰기는 세지 않는다.
+    """
+    has_upper = False
+    has_lower = False
+    has_digit = False
+    has_symbol = False
+
+    for char in password:
+        if "A" <= char <= "Z":
+            has_upper = True
+        elif "a" <= char <= "z":
+            has_lower = True
+        elif "0" <= char <= "9":
+            has_digit = True
+        elif char in string.punctuation:
+            has_symbol = True
+
+    # True는 1, False는 0으로 더해진다.
+    return has_upper + has_lower + has_digit + has_symbol
+
+
+def is_strong_password(password):
+    """
+    한국인터넷진흥원(KISA) 안내 기준을 지키는지 확인한다.
+
+    문자 종류를 3가지 이상 섞으면 8자 이상, 2가지 이상 섞으면 10자 이상이어야 한다.
+    """
+    kinds = count_char_kinds(password)
+
+    if kinds >= 3 and len(password) >= 8:
+        return True
+
+    if kinds >= 2 and len(password) >= 10:
+        return True
+
+    return False
