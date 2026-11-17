@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import streamlit as st
 
-from common import MENU_WEEK, date_long, date_short, esc, get_profile, go_to, is_logged_in, pill, show_source
+from common import MENU_WEEK, date_long, date_short, esc, get_profile, go_to, is_logged_in, my_words, pill, show_source
 from days import monday_of, school_days, today_kst
 from foods import ALLERGENS, count_risky_dishes, parse_dishes, parse_kcal
 from neis import NeisError, fetch_meals, fetch_schedule
@@ -80,8 +80,10 @@ def show_meal_card(profile, meals, holiday_names):
             else:
                 body = f'<p class="alert-line is-mint">{esc(T["today_allergy_safe"])}</p>'
 
+            words = my_words(profile)
+
             for meal in meals:
-                body += dishes_html(parse_dishes(meal["dishes"]), my_codes)
+                body += dishes_html(parse_dishes(meal["dishes"]), my_codes, words)
                 body += (
                     f'<p class="meal-meta"><b>{parse_kcal(meal["kcal"]):,.0f}</b> '
                     f'{esc(T["kcal_unit"])} · {esc(meal["meal"])}</p>'

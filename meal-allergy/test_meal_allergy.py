@@ -53,6 +53,14 @@ class FoodsTest(unittest.TestCase):
         self.assertEqual(foods.count_risky_dishes(dishes, [10]), 1)
         self.assertEqual(foods.count_risky_dishes(dishes, []), 0)
 
+    def test_watch_words_are_found_in_dish_names(self):
+        words = ["아몬드", "캐슈넛", "크런치쿠키"]
+
+        # 띄어쓰기를 빼고 비교한다. 이름에 없는 낱말은 나오지 않는다.
+        self.assertEqual(foods.find_watch_words("아몬드 크런치 쿠키", words), ["아몬드", "크런치쿠키"])
+        self.assertEqual(foods.find_watch_words("돈육한방수육", words), [])
+        self.assertEqual(foods.find_watch_words("아몬드쿠키", []), [])
+
 
 class DaysTest(unittest.TestCase):
     def test_week_math(self):
@@ -340,6 +348,32 @@ class DatabaseTest(unittest.TestCase):
             # 새 모양의 meals에 저장하고 찾을 수 있다.
             database.save_meals("7530878", [self.meal("20261117", "돈까스 (5)")])
             self.assertEqual(len(database.search_meals("7530878", "돈까스")), 1)
+
+    def test_watch_words_are_added_listed_searched_and_deleted(self):
+        add = database.add_watch_word
+
+        self.assertEqual(add(1, "  ", "메모"), "EMPTY")
+        self.assertEqual(add(1, "가" * 21, ""), "TOO_LONG")
+        self.assertEqual(add(1, " 아몬드 ", "번호 표시 없는 견과류"), "SUCCESS")
+        self.assertEqual(add(1, "아몬드", ""), "DUPLICATE")
+        self.assertEqual(add(1, "캐슈넛", "견과류"), "SUCCESS")
+        self.assertEqual(add(2, "아몬드", ""), "SUCCESS")
+
+        # 내 낱말만 등록한 순서대로 나온다. 다른 사람이 같은 낱말을 등록해도 섞이지 않는다.
+        mine = database.get_watch_words(1)
+
+        self.assertEqual([row["word"] for row in mine], ["아몬드", "캐슈넛"])
+
+        # 낱말이나 메모에 든 글자로 찾는다.
+        self.assertEqual([row["word"] for row in database.get_watch_words(1, "견과")], ["아몬드", "캐슈넛"])
+        self.assertEqual([row["word"] for row in database.get_watch_words(1, "캐슈")], ["캐슈넛"])
+
+        # 다른 사람의 번호로는 지워지지 않고, 내 번호로만 지워진다.
+        database.delete_watch_word(2, mine[0]["id"])
+        self.assertEqual(len(database.get_watch_words(1)), 2)
+
+        database.delete_watch_word(1, mine[0]["id"])
+        self.assertEqual([row["word"] for row in database.get_watch_words(1)], ["캐슈넛"])
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ from datetime import timedelta
 
 import streamlit as st
 
-from common import date_short, esc, get_profile, pill, show_page_head, show_source
+from common import date_short, esc, get_profile, my_words, pill, show_page_head, show_source
 from database import count_meals, save_meals, search_meals
 from days import today_kst
 from foods import ALLERGENS
@@ -20,7 +20,7 @@ from texts import TEXT as T
 SAVE_DAYS = 28
 
 
-def results_html(found, my_codes):
+def results_html(found, my_codes, words):
     """찾은 메뉴를 한 줄씩 HTML로 만든다. 줄마다 날짜·끼니 아래에 메뉴와 번호가 있다."""
     rows = ""
 
@@ -33,7 +33,7 @@ def results_html(found, my_codes):
         rows += (
             f'<div class="result-row">'
             f'<span class="result-date">{esc(date_short(item["meal_date"]))} · {esc(item["meal_name"])}{today_tag}</span>'
-            f'{dishes_html([(item["dish"], item["codes"])], my_codes)}</div>'
+            f'{dishes_html([(item["dish"], item["codes"])], my_codes, words)}</div>'
         )
 
     return f'<div class="soft">{rows}</div>'
@@ -90,7 +90,7 @@ def show_search():
                 else:
                     st.html(
                         f'<p class="summary">{esc(T["search_result"].format(count=len(found)))}</p>'
-                        + results_html(found, profile["allergies"])
+                        + results_html(found, profile["allergies"], my_words(profile))
                     )
 
         st.caption(T["search_saved_count"].format(count=count_meals(school["school_code"])))

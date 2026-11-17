@@ -4,28 +4,30 @@
 #   screen_today.py     오늘
 #   screen_meal.py      급식표
 #   screen_search.py    찾기
+#   screen_words.py     주의 낱말
 #   screen_settings.py  내 설정 창
 #   screen_account.py   로그인·회원가입 창
-# 나이스 포털에서 자료를 받는 코드는 neis.py, SQLite에 저장하는 코드(계정·급식 기록)는 database.py에 있다.
+# 나이스 포털에서 자료를 받는 코드는 neis.py, SQLite에 저장하는 코드(계정·주의 낱말·급식 기록)는 database.py에 있다.
 
 from pathlib import Path
 
 import streamlit as st
 
-from common import MENU_SEARCH, MENU_TODAY, MENU_WEEK, esc, is_logged_in
+from common import MENU_SEARCH, MENU_TODAY, MENU_WEEK, MENU_WORDS, esc, is_logged_in
 from database import create_tables
 from screen_account import log_out, show_login, show_recovery_code
 from screen_meal import show_meal
 from screen_search import show_search
 from screen_settings import show_settings
 from screen_today import show_today
+from screen_words import show_words
 from texts import TEXT as T
 
 APP_FOLDER = Path(__file__).resolve().parent
 
 
 def show_nav():
-    """위쪽 메뉴(로고, 화면 이름 세 개, 오른쪽 버튼)를 보여 주고 고른 화면 이름을 돌려준다."""
+    """위쪽 메뉴(로고, 화면 이름 네 개, 오른쪽 버튼)를 보여 주고 고른 화면 이름을 돌려준다."""
     with st.container(
         key="nav",
         horizontal=True,
@@ -38,7 +40,7 @@ def show_nav():
         )
         menu = st.radio(
             T["app_name"],
-            [MENU_TODAY, MENU_WEEK, MENU_SEARCH],
+            [MENU_TODAY, MENU_WEEK, MENU_SEARCH, MENU_WORDS],
             key="menu",
             horizontal=True,
             label_visibility="collapsed",
@@ -80,5 +82,7 @@ if menu == MENU_TODAY:
     show_today()
 elif menu == MENU_WEEK:
     show_meal()
-else:
+elif menu == MENU_SEARCH:
     show_search()
+else:
+    show_words()

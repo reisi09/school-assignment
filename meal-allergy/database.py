@@ -1,7 +1,8 @@
 # database.py
-# SQLite에 두 가지를 저장한다.
-#   users  계정: 아이디, 비밀번호 해시, 복구 코드 해시, 내 학교, 내 알레르기 번호
-#   meals  급식 기록: 나이스 포털에서 받은 급식을 메뉴 한 줄씩 저장한다. 찾기 화면이 여기서 찾는다.
+# SQLite에 세 가지를 저장한다.
+#   users        계정: 아이디, 비밀번호 해시, 복구 코드 해시, 내 학교, 내 알레르기 번호
+#   watch_words  주의 낱말: 번호로 표시되지 않는 재료(예: 아몬드)를 사용자가 직접 등록한다.
+#   meals        급식 기록: 나이스 포털에서 받은 급식을 메뉴 한 줄씩 저장한다. 찾기 화면이 여기서 찾는다.
 #
 # 비밀번호와 복구 코드는 원래 글자를 저장하지 않는다. 소금(salt)을 섞어 해시로 바꾼 값만 저장해서,
 # 데이터베이스 파일을 열어 봐도 원래 글자를 알 수 없다.
@@ -30,6 +31,9 @@ HASH_ROUNDS = 200_000
 # 복구 코드에 쓰는 글자. 헷갈리기 쉬운 0·O·1·I는 뺐다.
 RECOVERY_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
+# 주의 낱말의 최대 글자 수
+WORD_MAX = 20
+
 
 def connect_db():
     """데이터베이스에 연결한다. 결과를 이름으로 꺼낼 수 있게 row_factory를 정한다."""
@@ -49,7 +53,7 @@ def column_names(conn, table):
 
 
 def create_tables():
-    """테이블 두 개를 만든다. 이미 있으면 그대로 두고, 예전 모양이면 새 모양으로 고친다."""
+    """테이블 세 개를 만든다. 이미 있으면 그대로 두고, 예전 모양이면 새 모양으로 고친다."""
     conn = connect_db()
 
     try:
@@ -97,6 +101,21 @@ def create_tables():
                 dish TEXT NOT NULL,
                 allergy_codes TEXT NOT NULL,
                 UNIQUE (school_code, meal_date, meal_name, dish)
+            )
+            """
+        )
+
+        # 주의 낱말: 한 사람이 같은 낱말을 두 번 등록하지 못하도록 (user_id, word)에 UNIQUE를 건다.
+        # user_id는 users.id를 가리킨다.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS watch_words (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                word TEXT NOT NULL,
+                memo TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE (user_id, word)
             )
             """
         )
@@ -331,6 +350,87 @@ def save_settings(user_id, school, allergies):
         conn.close()
 
     return user_from_row(row)
+
+
+# ---------- 주의 낱말 ----------
+
+
+def add_watch_word(user_id, word, memo):
+    """
+    주의 낱말을 등록한다. 메뉴 이름에 이 낱말이 들어가면 화면에 표시한다.
+
+    반환값: SUCCESS / EMPTY(빈 낱말) / TOO_LONG(20자를 넘음) / DUPLICATE(이미 등록한 낱말)
+    """
+    word = word.strip()
+
+    if word == "":
+        return "EMPTY"
+
+    if len(word) > WORD_MAX:
+        return "TOO_LONG"
+
+    conn = connect_db()
+
+    try:
+        conn.execute(
+            "INSERT INTO watch_words (user_id, word, memo, created_at) VALUES (?, ?, ?, ?)",
+            (user_id, word, memo.strip(), now_kst()),
+        )
+        conn.commit()
+
+    except sqlite3.IntegrityError:
+        # (user_id, word)에 UNIQUE가 걸려 있어서 같은 낱말을 또 등록하면 이 오류가 난다.
+        return "DUPLICATE"
+
+    finally:
+        conn.close()
+
+    return "SUCCESS"
+
+
+def get_watch_words(user_id, keyword=""):
+    """
+    내 주의 낱말을 등록한 순서대로 돌려준다.
+
+    keyword를 주면 낱말이나 메모에 그 글자가 든 것만 돌려준다.
+    """
+    pattern = f"%{keyword.strip()}%"
+    conn = connect_db()
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM watch_words
+            WHERE user_id = ? AND (word LIKE ? OR memo LIKE ?)
+            ORDER BY id
+            """,
+            (user_id, pattern, pattern),
+        ).fetchall()
+
+    finally:
+        conn.close()
+
+    words = []
+
+    for row in rows:
+        words.append(dict(row))
+
+    return words
+
+
+def delete_watch_word(user_id, word_id):
+    """내 주의 낱말 하나를 지운다. user_id도 함께 확인해서 다른 사람의 낱말은 지우지 않는다."""
+    conn = connect_db()
+
+    try:
+        conn.execute(
+            "DELETE FROM watch_words WHERE id = ? AND user_id = ?",
+            (word_id, user_id),
+        )
+        conn.commit()
+
+    finally:
+        conn.close()
 
 
 # ---------- 급식 기록 ----------

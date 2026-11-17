@@ -13,6 +13,7 @@ from datetime import timedelta
 
 import streamlit as st
 
+from database import get_watch_words
 from days import monday_of, today_kst
 from texts import TEXT as T
 
@@ -37,6 +38,7 @@ DEFAULT_PROFILE = {
 MENU_TODAY = T["menu_today"]
 MENU_WEEK = T["menu_week"]
 MENU_SEARCH = T["menu_search"]
+MENU_WORDS = T["menu_words"]
 
 
 def is_logged_in():
@@ -47,6 +49,19 @@ def is_logged_in():
 def get_profile():
     """지금 쓰는 계정 정보(학교, 알레르기)를 돌려준다. 로그인하지 않았으면 기본값이다."""
     return st.session_state.get("user", DEFAULT_PROFILE)
+
+
+def my_words(profile):
+    """내 주의 낱말 목록(글자만)을 돌려준다. 로그인하지 않았으면 빈 목록이다."""
+    if profile["id"] is None:
+        return []
+
+    words = []
+
+    for row in get_watch_words(profile["id"]):
+        words.append(row["word"])
+
+    return words
 
 
 def go_to(menu):

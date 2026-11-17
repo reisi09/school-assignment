@@ -6,9 +6,9 @@ from datetime import timedelta
 
 import streamlit as st
 
-from common import date_short, esc, get_profile, pill, show_page_head, show_source, show_week_nav
+from common import date_short, esc, get_profile, my_words, pill, show_page_head, show_source, show_week_nav
 from days import from_ymd, school_days, today_kst
-from foods import ALLERGENS, find_my_allergens, parse_dishes, parse_kcal, parse_pairs
+from foods import ALLERGENS, find_my_allergens, find_watch_words, parse_dishes, parse_kcal, parse_pairs
 from neis import NeisError, fetch_meals, fetch_schedule
 from texts import TEXT as T
 
@@ -42,16 +42,18 @@ def empty_message(day, holidays):
     return T["meal_none_day"]
 
 
-def dishes_html(dishes, my_codes):
+def dishes_html(dishes, my_codes, words):
     """
-    메뉴 목록을 HTML로 만든다. 내 알레르기 식품이 든 메뉴는 빨갛게 표시한다.
+    메뉴 목록을 HTML로 만든다. 내 알레르기 식품이 든 메뉴는 빨갛게, 주의 낱말이 든 메뉴는 남색으로 표시한다.
 
     dishes는 foods.parse_dishes()가 돌려준 (이름, 알레르기 번호 목록) 목록이다.
+    words는 내 주의 낱말 목록이다.
     """
     items = ""
 
     for name, codes in dishes:
         mine = find_my_allergens(codes, my_codes)
+        watched = find_watch_words(name, words)
 
         # 알레르기 번호는 작은 회색 글자로 붙인다. 예: 5·6·10
         numbers = ""
@@ -64,11 +66,18 @@ def dishes_html(dishes, my_codes):
 
             numbers = f'<span class="codes">{"·".join(parts)}</span>'
 
+        tags = ""
+        classes = "dish"
+
         if len(mine) > 0:
-            tag = pill(T["my_allergy_tag"] + " · " + ", ".join(mine), "red")
-            items += f'<li class="dish is-risky"><span>{esc(name)}</span>{numbers}{tag}</li>'
-        else:
-            items += f'<li class="dish"><span>{esc(name)}</span>{numbers}</li>'
+            tags += pill(T["my_allergy_tag"] + " · " + ", ".join(mine), "red")
+            classes += " is-risky"
+
+        if len(watched) > 0:
+            tags += pill(T["watch_tag"] + " · " + ", ".join(watched), "navy")
+            classes += " is-watched"
+
+        items += f'<li class="{classes}"><span>{esc(name)}</span>{numbers}{tags}</li>'
 
     return f'<ul class="dishes">{items}</ul>'
 
@@ -86,7 +95,7 @@ def pairs_html(title, text):
     return f'<details class="more"><summary>{esc(title)}</summary>{rows}</details>'
 
 
-def day_card(day, meals, holidays, my_codes):
+def day_card(day, meals, holidays, my_codes, words):
     """하루 급식 카드를 HTML로 만든다. meals는 그날 급식 목록(끼니별)이다."""
     head = f'<div class="day-head"><b>{esc(date_short(day))}</b>'
 
@@ -110,7 +119,7 @@ def day_card(day, meals, holidays, my_codes):
 
     for meal in meals:
         body += f'<p class="meal-name">{esc(meal["meal"])}</p>'
-        body += dishes_html(parse_dishes(meal["dishes"]), my_codes)
+        body += dishes_html(parse_dishes(meal["dishes"]), my_codes, words)
         body += (
             f'<p class="meal-meta"><b>{parse_kcal(meal["kcal"]):,.0f}</b> {esc(T["kcal_unit"])}'
             f' · {esc(T["meal_headcount"].format(count=f"{float(meal["headcount"] or 0):,.0f}"))}</p>'
@@ -165,9 +174,10 @@ def show_meal():
 
         # 월~금 날짜와 칸 다섯 개를 짝지어 하나씩 채운다.
         columns = st.columns(5, gap="small")
+        words = my_words(profile)
 
         for day, column in zip(school_days(monday), columns):
-            column.html(day_card(day, by_day.get(day, []), holidays, profile["allergies"]))
+            column.html(day_card(day, by_day.get(day, []), holidays, profile["allergies"], words))
 
         st.html(allergy_legend_html(profile["allergies"]))
         show_source()

@@ -115,6 +115,18 @@ def find_my_allergens(codes, my_codes):
     return names
 
 
+def find_watch_words(name, words):
+    """메뉴 이름에 들어 있는 주의 낱말을 찾는다. 띄어쓰기는 빼고 비교한다. 예: '아몬드 쿠키'에서 '아몬드'"""
+    plain = name.replace(" ", "")
+    found = []
+
+    for word in words:
+        if word.replace(" ", "") in plain:
+            found.append(word)
+
+    return found
+
+
 def count_risky_dishes(dishes, my_codes):
     """메뉴 목록에서 내 알레르기 식품이 든 메뉴의 수를 센다."""
     count = 0
