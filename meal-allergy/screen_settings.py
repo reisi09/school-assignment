@@ -29,28 +29,11 @@ def school_label(school):
 
 @st.dialog(T["settings_title"], width="medium")
 def show_settings():
-    """내 설정 창. 위에는 불러오기, 아래에는 저장하기가 있다."""
+    """내 설정 창. 위에서 학교·알레르기·이름표를 저장하고, 맨 아래 접힌 칸에서 다른 기기의 설정을 불러온다."""
     profile = get_profile()
     st.html(f'<p class="dialog-intro">{esc(T["settings_intro"])}</p>')
 
-    # 1. 이름표로 불러오기
-    with st.container(horizontal=True, vertical_alignment="bottom"):
-        load_name = st.text_input(T["load_label"], key="load_name")
-        load_clicked = st.button(T["load_button"], key="load_button")
-
-    if load_clicked:
-        loaded = load_profile(load_name)
-
-        if loaded is None:
-            st.warning(T["load_none"])
-        else:
-            use_profile(loaded)
-            st.toast(T["load_done"].format(nickname=loaded["nickname"]))
-            st.rerun()
-
-    st.divider()
-
-    # 2. 학교 찾기: 찾은 학교는 session_state에 두고 고르는 칸에 보여 준다.
+    # 1. 학교 찾기: 찾은 학교는 session_state에 두고 고르는 칸에 보여 준다.
     with st.container(horizontal=True, vertical_alignment="bottom"):
         school_name = st.text_input(
             T["field_school"],
@@ -81,7 +64,7 @@ def show_settings():
 
     school = st.selectbox(T["school_pick"], choices, format_func=school_label, key="school_choice")
 
-    # 3. 알레르기
+    # 2. 알레르기
     allergies = st.multiselect(
         T["field_allergies"],
         list(ALLERGENS),
@@ -92,7 +75,7 @@ def show_settings():
     )
     st.caption(T["allergies_help"])
 
-    # 4. 이름표와 저장
+    # 3. 이름표와 저장. 이름표는 로그인 대신 쓰는 별명이다.
     nickname = st.text_input(T["field_nickname"], value=profile["nickname"], key="nickname_input")
     st.caption(T["nickname_help"])
 
@@ -105,5 +88,23 @@ def show_settings():
             use_profile(load_profile(nickname))
             st.toast(T["settings_saved"].format(nickname=nickname.strip()))
             st.rerun()
+
+    # 4. 이름표로 불러오기: 다른 기기나 브라우저에서 저장한 설정을 가져올 때만 쓰므로 접어 둔다.
+    with st.expander(T["load_title"]):
+        st.caption(T["load_help"])
+
+        with st.container(horizontal=True, vertical_alignment="bottom"):
+            load_name = st.text_input(T["load_label"], key="load_name")
+            load_clicked = st.button(T["load_button"], key="load_button")
+
+        if load_clicked:
+            loaded = load_profile(load_name)
+
+            if loaded is None:
+                st.warning(T["load_none"])
+            else:
+                use_profile(loaded)
+                st.toast(T["load_done"].format(nickname=loaded["nickname"]))
+                st.rerun()
 
     st.caption(T["shared_notice"])
