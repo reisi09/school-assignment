@@ -14,7 +14,7 @@ import streamlit as st
 
 from common import MENU_SEARCH, MENU_TODAY, MENU_WEEK, esc, is_logged_in
 from database import create_tables
-from screen_account import log_out, show_login
+from screen_account import log_out, show_login, show_recovery_code
 from screen_meal import show_meal
 from screen_search import show_search
 from screen_settings import show_settings
@@ -71,6 +71,10 @@ st.html(APP_FOLDER / "style.css")
 create_tables()
 
 menu = show_nav()
+
+# 가입하거나 비밀번호를 바꾼 직후에는 새 복구 코드 창을 한 번 띄운다.
+if "recovery_code" in st.session_state:
+    show_recovery_code()
 
 if menu == MENU_TODAY:
     show_today()

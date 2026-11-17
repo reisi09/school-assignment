@@ -2,6 +2,7 @@
 # 급식 알레르기의 계산·저장·검색·자료 받기를 확인한다. 나이스 포털에는 실제로 연결하지 않는다.
 # 실행: python -m unittest -v
 
+import sqlite3
 import tempfile
 import unittest
 from datetime import date, timedelta
@@ -194,25 +195,27 @@ class DatabaseTest(unittest.TestCase):
         """neis.fetch_meals()가 돌려주는 모양의 급식 하나"""
         return {"date": day, "meal": "중식", "dishes": dishes}
 
-    def test_signup_checks_rules_and_stores_only_a_hash(self):
+    def test_signup_checks_rules_and_stores_only_hashes(self):
         create = database.create_user
+        code = "K7QM-3XRP-9DTA"
 
-        self.assertEqual(create("ab", "password1", "password1", self.school), "BAD_USERNAME")
-        self.assertEqual(create("a" * 21, "password1", "password1", self.school), "BAD_USERNAME")
-        self.assertEqual(create("급식지킴이", "short", "short", self.school), "SHORT_PASSWORD")
-        self.assertEqual(create("급식지킴이", "password1", "password2", self.school), "MISMATCH")
-        self.assertEqual(create(" 급식지킴이 ", "password1", "password1", self.school), "SUCCESS")
-        self.assertEqual(create("급식지킴이", "password9", "password9", self.school), "TAKEN")
+        self.assertEqual(create("ab", "password1", "password1", self.school, code), "BAD_USERNAME")
+        self.assertEqual(create("a" * 21, "password1", "password1", self.school, code), "BAD_USERNAME")
+        self.assertEqual(create("급식지킴이", "short", "short", self.school, code), "SHORT_PASSWORD")
+        self.assertEqual(create("급식지킴이", "password1", "password2", self.school, code), "MISMATCH")
+        self.assertEqual(create(" 급식지킴이 ", "password1", "password1", self.school, code), "SUCCESS")
+        self.assertEqual(create("급식지킴이", "password9", "password9", self.school, code), "TAKEN")
 
-        # 비밀번호 원래 글자는 DB에 남지 않는다.
+        # 비밀번호와 복구 코드의 원래 글자는 DB에 남지 않는다.
         conn = database.connect_db()
-        stored = conn.execute("SELECT password_hash FROM users").fetchone()["password_hash"]
+        row = conn.execute("SELECT password_hash, recovery_hash FROM users").fetchone()
         conn.close()
 
-        self.assertNotIn("password1", stored)
+        self.assertNotIn("password1", row["password_hash"])
+        self.assertNotIn("K7QM3XRP9DTA", row["recovery_hash"])
 
     def test_login_needs_the_right_password(self):
-        database.create_user("급식지킴이", "password1", "password1", self.school)
+        database.create_user("급식지킴이", "password1", "password1", self.school, "K7QM-3XRP-9DTA")
 
         user = database.login("급식지킴이", "password1")
 
@@ -233,7 +236,7 @@ class DatabaseTest(unittest.TestCase):
         self.assertFalse(database.check_password("password2", first))
 
     def test_settings_are_saved_to_the_account(self):
-        database.create_user("급식지킴이", "password1", "password1", self.school)
+        database.create_user("급식지킴이", "password1", "password1", self.school, "K7QM-3XRP-9DTA")
         user = database.login("급식지킴이", "password1")
         other = dict(self.school, name="고색중학교", kind="중학교", school_code="7531000")
 
@@ -245,6 +248,31 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(saved["allergies"], [5, 10])
         self.assertEqual(again["school"], other)
         self.assertEqual(again["allergies"], [5, 10])
+
+    def test_recovery_code_resets_the_password_only_once(self):
+        database.create_user("급식지킴이", "password1", "password1", self.school, "K7QM-3XRP-9DTA")
+        reset = database.reset_password
+
+        self.assertEqual(reset("급식지킴이", "AAAA-BBBB-CCCC", "newpass99", "newpass99", "BBBB-CCCC-DDDD"), "WRONG_CODE")
+        self.assertEqual(reset("없는아이디", "K7QM-3XRP-9DTA", "newpass99", "newpass99", "BBBB-CCCC-DDDD"), "WRONG_CODE")
+        self.assertEqual(reset("급식지킴이", "K7QM-3XRP-9DTA", "short", "short", "BBBB-CCCC-DDDD"), "SHORT_PASSWORD")
+
+        # 소문자로, 하이픈 없이 넣어도 맞는 코드로 본다.
+        self.assertEqual(reset("급식지킴이", "k7qm3xrp9dta", "newpass99", "newpass99", "BBBB-CCCC-DDDD"), "SUCCESS")
+        self.assertIsNone(database.login("급식지킴이", "password1"))
+        self.assertIsNotNone(database.login("급식지킴이", "newpass99"))
+
+        # 쓴 코드는 더는 쓸 수 없고, 새로 받은 코드로만 다시 바꿀 수 있다.
+        self.assertEqual(reset("급식지킴이", "K7QM-3XRP-9DTA", "another99", "another99", "EEEE-FFFF-GGGG"), "WRONG_CODE")
+        self.assertEqual(reset("급식지킴이", "BBBB-CCCC-DDDD", "another99", "another99", "EEEE-FFFF-GGGG"), "SUCCESS")
+
+    def test_recovery_codes_are_random_and_easy_to_read(self):
+        first = database.make_recovery_code()
+        second = database.make_recovery_code()
+
+        # 헷갈리는 0·O·1·I 없이 4글자씩 세 묶음이다.
+        self.assertRegex(first, r"^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$")
+        self.assertNotEqual(first, second)
 
     def test_meals_are_saved_once_and_found_by_name_and_allergen(self):
         meals = [
@@ -275,6 +303,43 @@ class DatabaseTest(unittest.TestCase):
 
         # 이름과 식품을 함께 주면 둘 다 맞는 메뉴만 찾는다.
         self.assertEqual(database.search_meals("7530878", "김치", 5), [])
+
+    def test_old_database_is_upgraded_without_losing_accounts(self):
+        old_path = Path(self.folder.name) / "old.db"
+
+        # 예전 버전이 만든 모양: users에 recovery_hash가 없고, meals에 saved_at이 있다.
+        conn = sqlite3.connect(str(old_path))
+        conn.execute(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE,"
+            " password_hash TEXT NOT NULL, school_name TEXT NOT NULL, school_kind TEXT NOT NULL,"
+            " atpt_code TEXT NOT NULL, school_code TEXT NOT NULL, allergies TEXT NOT NULL, created_at TEXT NOT NULL)"
+        )
+        conn.execute(
+            "INSERT INTO users (username, password_hash, school_name, school_kind, atpt_code, school_code,"
+            " allergies, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ("예전계정", database.hash_password("password1"), "고색고등학교", "고등학교", "J10", "7530878", "5", "2026-11-17"),
+        )
+        conn.execute(
+            "CREATE TABLE meals (id INTEGER PRIMARY KEY AUTOINCREMENT, school_code TEXT NOT NULL,"
+            " meal_date TEXT NOT NULL, meal_name TEXT NOT NULL, dish TEXT NOT NULL,"
+            " allergy_codes TEXT NOT NULL, saved_at TEXT NOT NULL)"
+        )
+        conn.commit()
+        conn.close()
+
+        with mock.patch.object(database, "DB_PATH", old_path):
+            database.create_tables()
+
+            # 예전 계정은 그대로 로그인되고, 복구 코드가 없으니 비밀번호 찾기는 거절된다.
+            self.assertEqual(database.login("예전계정", "password1")["allergies"], [5])
+            self.assertEqual(
+                database.reset_password("예전계정", "", "newpass99", "newpass99", "BBBB-CCCC-DDDD"),
+                "WRONG_CODE",
+            )
+
+            # 새 모양의 meals에 저장하고 찾을 수 있다.
+            database.save_meals("7530878", [self.meal("20261117", "돈까스 (5)")])
+            self.assertEqual(len(database.search_meals("7530878", "돈까스")), 1)
 
 
 if __name__ == "__main__":

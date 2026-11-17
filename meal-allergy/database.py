@@ -1,10 +1,10 @@
 # database.py
 # SQLite에 두 가지를 저장한다.
-#   users  계정: 아이디, 비밀번호 해시, 내 학교, 내 알레르기 번호
+#   users  계정: 아이디, 비밀번호 해시, 복구 코드 해시, 내 학교, 내 알레르기 번호
 #   meals  급식 기록: 나이스 포털에서 받은 급식을 메뉴 한 줄씩 저장한다. 찾기 화면이 여기서 찾는다.
 #
-# 비밀번호는 원래 글자를 저장하지 않는다. 소금(salt)을 섞어 해시로 바꾼 값만 저장해서,
-# 데이터베이스 파일을 열어 봐도 원래 비밀번호를 알 수 없다.
+# 비밀번호와 복구 코드는 원래 글자를 저장하지 않는다. 소금(salt)을 섞어 해시로 바꾼 값만 저장해서,
+# 데이터베이스 파일을 열어 봐도 원래 글자를 알 수 없다.
 
 import hashlib
 import hmac
@@ -27,6 +27,9 @@ PASSWORD_MIN = 8
 # 비밀번호 해시를 만들 때 되풀이하는 횟수. 많을수록 비밀번호를 하나씩 맞혀 보는 공격이 느려진다.
 HASH_ROUNDS = 200_000
 
+# 복구 코드에 쓰는 글자. 헷갈리기 쉬운 0·O·1·I는 뺐다.
+RECOVERY_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
 
 def connect_db():
     """데이터베이스에 연결한다. 결과를 이름으로 꺼낼 수 있게 row_factory를 정한다."""
@@ -35,11 +38,33 @@ def connect_db():
     return conn
 
 
+def column_names(conn, table):
+    """테이블의 칸 이름 목록을 돌려준다. 테이블이 없으면 빈 목록이다."""
+    names = []
+
+    for row in conn.execute(f"PRAGMA table_info({table})").fetchall():
+        names.append(row["name"])
+
+    return names
+
+
 def create_tables():
-    """테이블 두 개를 만든다. 이미 있으면 그대로 둔다."""
+    """테이블 두 개를 만든다. 이미 있으면 그대로 두고, 예전 모양이면 새 모양으로 고친다."""
     conn = connect_db()
 
     try:
+        # 예전 버전이 만든 users에는 recovery_hash 칸이 없다. 칸을 붙이고 값은 빈 글자로 둔다.
+        # 그런 계정은 로그인은 그대로 되지만 복구 코드가 없어서 비밀번호 찾기는 쓸 수 없다.
+        users_columns = column_names(conn, "users")
+
+        if len(users_columns) > 0 and "recovery_hash" not in users_columns:
+            conn.execute("ALTER TABLE users ADD COLUMN recovery_hash TEXT NOT NULL DEFAULT ''")
+
+        # 예전 meals에는 지금 쓰지 않는 saved_at 칸이 있다. 급식 기록은 나이스에서 다시 받으면 되므로
+        # 테이블을 지우고 아래에서 새로 만든다.
+        if "saved_at" in column_names(conn, "meals"):
+            conn.execute("DROP TABLE meals")
+
         # username에 UNIQUE를 걸어 같은 아이디가 두 번 저장되지 않게 한다.
         # allergies는 알레르기 번호를 쉼표로 이은 글자다. 예: "5,10"
         conn.execute(
@@ -48,6 +73,7 @@ def create_tables():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
+                recovery_hash TEXT NOT NULL,
                 school_name TEXT NOT NULL,
                 school_kind TEXT NOT NULL,
                 atpt_code TEXT NOT NULL,
@@ -70,7 +96,6 @@ def create_tables():
                 meal_name TEXT NOT NULL,
                 dish TEXT NOT NULL,
                 allergy_codes TEXT NOT NULL,
-                saved_at TEXT NOT NULL,
                 UNIQUE (school_code, meal_date, meal_name, dish)
             )
             """
@@ -82,12 +107,12 @@ def create_tables():
         conn.close()
 
 
-# ---------- 비밀번호 ----------
+# ---------- 비밀번호와 복구 코드 ----------
 
 
 def hash_password(password, salt=None):
     """
-    비밀번호를 해시로 바꾼다. 결과는 "소금$해시" 모양의 글자다.
+    비밀번호를 해시로 바꾼다. 결과는 "소금$해시" 모양의 글자다. 복구 코드도 이 함수로 바꾼다.
 
     소금(salt)은 계정마다 다른 무작위 글자다. 그래서 같은 비밀번호라도 저장되는 글자가 달라진다.
     """
@@ -107,11 +132,38 @@ def check_password(password, stored):
     return hmac.compare_digest(hash_password(password, salt), stored)
 
 
+def make_recovery_code():
+    """비밀번호를 잊었을 때 쓸 복구 코드를 만든다. 예: K7QM-3XRP-9DTA"""
+    letters = ""
+
+    # secrets.choice는 맞히기 어려운 무작위 글자를 고른다. 12글자를 뽑는다.
+    for number in range(12):
+        letters += secrets.choice(RECOVERY_LETTERS)
+
+    return letters[0:4] + "-" + letters[4:8] + "-" + letters[8:12]
+
+
+def normalize_code(code):
+    """복구 코드를 비교하기 좋게 바꾼다. 소문자는 대문자로, 하이픈과 띄어쓰기는 뺀다."""
+    return code.upper().replace("-", "").replace(" ", "")
+
+
+def check_new_password(password, password_confirm):
+    """새 비밀번호를 확인한다. 반환값: OK / SHORT_PASSWORD(8자보다 짧음) / MISMATCH(확인이 다름)"""
+    if len(password) < PASSWORD_MIN:
+        return "SHORT_PASSWORD"
+
+    if password != password_confirm:
+        return "MISMATCH"
+
+    return "OK"
+
+
 # ---------- 계정 ----------
 
 
 def user_from_row(row):
-    """users 테이블의 한 줄을 화면이 쓰는 계정 정보로 바꾼다. 비밀번호 해시는 넣지 않는다."""
+    """users 테이블의 한 줄을 화면이 쓰는 계정 정보로 바꾼다. 해시는 넣지 않는다."""
     allergies = []
 
     for part in row["allergies"].split(","):
@@ -131,10 +183,11 @@ def user_from_row(row):
     }
 
 
-def create_user(username, password, password_confirm, school):
+def create_user(username, password, password_confirm, school, recovery_code):
     """
     회원가입: 아이디와 비밀번호를 확인하고 계정을 만든다. 처음 학교는 school이고 알레르기는 없다.
 
+    recovery_code는 make_recovery_code()로 만든 복구 코드다. 해시로 바꿔 저장한다.
     반환값: SUCCESS / BAD_USERNAME(3~20자가 아님) / SHORT_PASSWORD(8자보다 짧음)
             MISMATCH(비밀번호 확인이 다름) / TAKEN(이미 있는 아이디)
     """
@@ -143,11 +196,10 @@ def create_user(username, password, password_confirm, school):
     if not USERNAME_MIN <= len(username) <= USERNAME_MAX:
         return "BAD_USERNAME"
 
-    if len(password) < PASSWORD_MIN:
-        return "SHORT_PASSWORD"
+    status = check_new_password(password, password_confirm)
 
-    if password != password_confirm:
-        return "MISMATCH"
+    if status != "OK":
+        return status
 
     conn = connect_db()
 
@@ -155,14 +207,15 @@ def create_user(username, password, password_confirm, school):
         conn.execute(
             """
             INSERT INTO users (
-                username, password_hash, school_name, school_kind, atpt_code, school_code,
-                allergies, created_at
+                username, password_hash, recovery_hash, school_name, school_kind,
+                atpt_code, school_code, allergies, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 username,
                 hash_password(password),
+                hash_password(normalize_code(recovery_code)),
                 school["name"],
                 school["kind"],
                 school["atpt_code"],
@@ -203,6 +256,46 @@ def login(username, password):
         return None
 
     return user_from_row(row)
+
+
+def reset_password(username, recovery_code, new_password, new_password_confirm, new_recovery_code):
+    """
+    비밀번호 찾기: 복구 코드가 맞으면 비밀번호를 바꾸고, 복구 코드도 새것으로 바꾼다.
+
+    쓴 복구 코드는 다시 쓸 수 없다. new_recovery_code는 make_recovery_code()로 만든 새 코드다.
+    반환값: SUCCESS / SHORT_PASSWORD / MISMATCH / WRONG_CODE(아이디나 복구 코드가 틀림)
+    """
+    status = check_new_password(new_password, new_password_confirm)
+
+    if status != "OK":
+        return status
+
+    conn = connect_db()
+
+    try:
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ?",
+            (username.strip(),),
+        ).fetchone()
+
+        # 아이디가 없을 때와 코드가 틀렸을 때를 구분해 알려 주지 않는다.
+        if row is None or not check_password(normalize_code(recovery_code), row["recovery_hash"]):
+            return "WRONG_CODE"
+
+        conn.execute(
+            "UPDATE users SET password_hash = ?, recovery_hash = ? WHERE id = ?",
+            (
+                hash_password(new_password),
+                hash_password(normalize_code(new_recovery_code)),
+                row["id"],
+            ),
+        )
+        conn.commit()
+
+    finally:
+        conn.close()
+
+    return "SUCCESS"
 
 
 def save_settings(user_id, school, allergies):
@@ -250,7 +343,6 @@ def save_meals(school_code, meals):
     meals는 neis.fetch_meals()가 돌려준 급식 목록이다.
     같은 학교·날짜·끼니·메뉴가 이미 있으면 새 내용으로 바꿔 쓴다(INSERT OR REPLACE).
     """
-    now = now_kst()
     conn = connect_db()
 
     try:
@@ -271,12 +363,10 @@ def save_meals(school_code, meals):
 
                 conn.execute(
                     """
-                    INSERT OR REPLACE INTO meals (
-                        school_code, meal_date, meal_name, dish, allergy_codes, saved_at
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT OR REPLACE INTO meals (school_code, meal_date, meal_name, dish, allergy_codes)
+                    VALUES (?, ?, ?, ?, ?)
                     """,
-                    (school_code, meal_date, meal["meal"], dish, allergy_codes, now),
+                    (school_code, meal_date, meal["meal"], dish, allergy_codes),
                 )
 
         conn.commit()

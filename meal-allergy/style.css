@@ -238,6 +238,20 @@
   color: var(--muted);
 }
 
+/* 복구 코드: 크게, 글자 사이를 띄워 옮겨 적기 쉽게. 누르면 코드 전체가 한 번에 선택된다. */
+.recovery-code {
+  margin: 1rem 0 0;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--fill);
+  text-align: center;
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  user-select: all;
+}
+
 /* ---------- 카드 ---------- */
 
 /* 버튼이 들어가는 카드 (key가 card_로 시작하는 영역) */
