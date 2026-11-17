@@ -5,14 +5,16 @@
 #   screen_meal.py      급식표
 #   screen_search.py    찾기
 #   screen_settings.py  내 설정 창
-# 나이스 포털에서 자료를 받는 코드는 neis.py, SQLite에 저장하는 코드는 database.py에 있다.
+#   screen_account.py   로그인·회원가입 창
+# 나이스 포털에서 자료를 받는 코드는 neis.py, SQLite에 저장하는 코드(계정·급식 기록)는 database.py에 있다.
 
 from pathlib import Path
 
 import streamlit as st
 
-from common import MENU_SEARCH, MENU_TODAY, MENU_WEEK, esc
-from database import create_tables, load_profile
+from common import MENU_SEARCH, MENU_TODAY, MENU_WEEK, esc, is_logged_in
+from database import create_tables
+from screen_account import log_out, show_login
 from screen_meal import show_meal
 from screen_search import show_search
 from screen_settings import show_settings
@@ -23,7 +25,7 @@ APP_FOLDER = Path(__file__).resolve().parent
 
 
 def show_nav():
-    """위쪽 메뉴(로고, 화면 이름 세 개, 내 설정 버튼)를 보여 주고 고른 화면 이름을 돌려준다."""
+    """위쪽 메뉴(로고, 화면 이름 세 개, 오른쪽 버튼)를 보여 주고 고른 화면 이름을 돌려준다."""
     with st.container(
         key="nav",
         horizontal=True,
@@ -43,8 +45,16 @@ def show_nav():
             width="content",
         )
 
-        if st.button(T["nav_settings"], type="primary", key="nav_settings"):
-            show_settings()
+        # 오른쪽 버튼: 로그인 전에는 [로그인], 로그인 뒤에는 [내 설정] [로그아웃]
+        with st.container(horizontal=True, width="content", key="nav_buttons"):
+            if is_logged_in():
+                if st.button(T["nav_settings"], type="primary", key="nav_settings"):
+                    show_settings()
+
+                st.button(T["nav_logout"], key="nav_logout", on_click=log_out)
+
+            elif st.button(T["nav_login"], type="primary", key="nav_login"):
+                show_login()
 
     return menu
 
@@ -59,13 +69,6 @@ st.set_page_config(
 st.html(APP_FOLDER / "style.css")
 
 create_tables()
-
-# 주소창에 ?me=이름표 가 있으면 처음 열 때 그 설정을 불러온다.
-if "profile" not in st.session_state and "me" in st.query_params:
-    loaded = load_profile(st.query_params["me"])
-
-    if loaded is not None:
-        st.session_state["profile"] = loaded
 
 menu = show_nav()
 

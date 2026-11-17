@@ -18,7 +18,7 @@ from texts import TEXT as T
 
 # ---------- 1. 기본값 ----------
 
-# 내 설정을 저장하기 전에 보여 줄 학교
+# 로그인하지 않았을 때 보여 줄 학교. 회원가입하면 처음 학교도 이 학교다.
 DEFAULT_SCHOOL = {
     "name": "고색고등학교",
     "kind": "고등학교",
@@ -26,8 +26,10 @@ DEFAULT_SCHOOL = {
     "school_code": "7530878",
 }
 
+# 로그인하지 않았을 때 쓰는 계정 정보. 알레르기가 없으니 알레르기 표시는 나오지 않는다.
 DEFAULT_PROFILE = {
-    "nickname": "",
+    "id": None,
+    "username": "",
     "school": DEFAULT_SCHOOL,
     "allergies": [],
 }
@@ -37,9 +39,14 @@ MENU_WEEK = T["menu_week"]
 MENU_SEARCH = T["menu_search"]
 
 
+def is_logged_in():
+    """로그인했는지 알려 준다. 로그인한 계정은 st.session_state["user"]에 있다."""
+    return "user" in st.session_state
+
+
 def get_profile():
-    """지금 쓰는 설정을 돌려준다. 저장한 설정이 없으면 기본 설정이다."""
-    return st.session_state.get("profile", DEFAULT_PROFILE)
+    """지금 쓰는 계정 정보(학교, 알레르기)를 돌려준다. 로그인하지 않았으면 기본값이다."""
+    return st.session_state.get("user", DEFAULT_PROFILE)
 
 
 def go_to(menu):

@@ -194,22 +194,57 @@ class DatabaseTest(unittest.TestCase):
         """neis.fetch_meals()가 돌려주는 모양의 급식 하나"""
         return {"date": day, "meal": "중식", "dishes": dishes}
 
-    def test_profile_is_saved_and_updated_by_nickname(self):
-        self.assertEqual(database.save_profile("  ", self.school, [5]), "EMPTY")
-        self.assertIsNone(database.load_profile("급식지킴이"))
+    def test_signup_checks_rules_and_stores_only_a_hash(self):
+        create = database.create_user
 
-        database.save_profile("급식지킴이", self.school, [5, 10])
-        first = database.load_profile("급식지킴이")
+        self.assertEqual(create("ab", "password1", "password1", self.school), "BAD_USERNAME")
+        self.assertEqual(create("a" * 21, "password1", "password1", self.school), "BAD_USERNAME")
+        self.assertEqual(create("급식지킴이", "short", "short", self.school), "SHORT_PASSWORD")
+        self.assertEqual(create("급식지킴이", "password1", "password2", self.school), "MISMATCH")
+        self.assertEqual(create(" 급식지킴이 ", "password1", "password1", self.school), "SUCCESS")
+        self.assertEqual(create("급식지킴이", "password9", "password9", self.school), "TAKEN")
 
+        # 비밀번호 원래 글자는 DB에 남지 않는다.
+        conn = database.connect_db()
+        stored = conn.execute("SELECT password_hash FROM users").fetchone()["password_hash"]
+        conn.close()
+
+        self.assertNotIn("password1", stored)
+
+    def test_login_needs_the_right_password(self):
+        database.create_user("급식지킴이", "password1", "password1", self.school)
+
+        user = database.login("급식지킴이", "password1")
+
+        self.assertEqual(user["username"], "급식지킴이")
+        self.assertEqual(user["school"], self.school)
+        self.assertEqual(user["allergies"], [])
+        self.assertNotIn("password_hash", user)
+        self.assertIsNone(database.login("급식지킴이", "password2"))
+        self.assertIsNone(database.login("없는아이디", "password1"))
+
+    def test_same_password_gets_a_different_salt(self):
+        first = database.hash_password("password1")
+        second = database.hash_password("password1")
+
+        self.assertNotEqual(first, second)
+        self.assertTrue(database.check_password("password1", first))
+        self.assertTrue(database.check_password("password1", second))
+        self.assertFalse(database.check_password("password2", first))
+
+    def test_settings_are_saved_to_the_account(self):
+        database.create_user("급식지킴이", "password1", "password1", self.school)
+        user = database.login("급식지킴이", "password1")
         other = dict(self.school, name="고색중학교", kind="중학교", school_code="7531000")
-        database.save_profile(" 급식지킴이 ", other, [])
-        second = database.load_profile("급식지킴이")
 
-        self.assertEqual(first["allergies"], [5, 10])
-        # 같은 이름표로 저장하면 새 줄을 만들지 않고 내용만 바꾼다. 처음 저장한 시각은 그대로다.
-        self.assertEqual(second["school"], other)
-        self.assertEqual(second["allergies"], [])
-        self.assertEqual(second["created_at"], first["created_at"])
+        saved = database.save_settings(user["id"], other, [5, 10])
+
+        # 다시 로그인해도 저장한 학교와 알레르기가 나온다.
+        again = database.login("급식지킴이", "password1")
+
+        self.assertEqual(saved["allergies"], [5, 10])
+        self.assertEqual(again["school"], other)
+        self.assertEqual(again["allergies"], [5, 10])
 
     def test_meals_are_saved_once_and_found_by_name_and_allergen(self):
         meals = [

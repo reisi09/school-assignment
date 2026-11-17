@@ -5,10 +5,11 @@ from datetime import timedelta
 
 import streamlit as st
 
-from common import MENU_WEEK, date_long, date_short, esc, get_profile, go_to, pill, show_source
+from common import MENU_WEEK, date_long, date_short, esc, get_profile, go_to, is_logged_in, pill, show_source
 from days import monday_of, school_days, today_kst
 from foods import ALLERGENS, count_risky_dishes, parse_dishes, parse_kcal
 from neis import NeisError, fetch_meals, fetch_schedule
+from screen_account import show_login
 from screen_meal import dishes_html, empty_message, group_holidays, group_meals
 from screen_settings import show_settings
 from texts import TEXT as T
@@ -24,22 +25,35 @@ def dishes_of(meals):
     return dishes
 
 
+def setup_card(title, body):
+    """맨 위 안내 카드의 제목과 설명을 HTML로 만든다."""
+    return f'<h2 class="setup-title">{esc(title)}</h2><p class="setup-body">{esc(body)}</p>'
+
+
 def show_hero(profile):
-    """맨 위: 오늘 날짜와 학교. 알레르기를 등록하지 않았으면 등록을 권한다."""
+    """맨 위: 오늘 날짜와 학교. 로그인이나 알레르기 등록을 아직 안 했으면 먼저 하라고 권한다."""
     school_name = profile["school"]["name"]
+    who = school_name
+
+    if is_logged_in():
+        who = T["hero_who_user"].format(school=school_name, username=profile["username"])
 
     with st.container(key="sec_hero"):
         st.html(
-            f'<p class="hero-who">{esc(school_name)}</p>'
+            f'<p class="hero-who">{esc(who)}</p>'
             f'<h1 class="hero-title">{esc(date_long(today_kst()))}</h1>'
         )
 
-        if len(profile["allergies"]) == 0:
+        if not is_logged_in():
             with st.container(key="card_setup"):
-                st.html(
-                    f'<h2 class="setup-title">{esc(T["setup_title"])}</h2>'
-                    f'<p class="setup-body">{esc(T["setup_body"].format(school=school_name))}</p>'
-                )
+                st.html(setup_card(T["setup_login_title"], T["setup_login_body"].format(school=school_name)))
+
+                if st.button(T["setup_login_button"], type="primary", key="setup_login"):
+                    show_login()
+
+        elif len(profile["allergies"]) == 0:
+            with st.container(key="card_setup"):
+                st.html(setup_card(T["setup_title"], T["setup_body"].format(school=school_name)))
 
                 if st.button(T["setup_button"], type="primary", key="setup_open"):
                     show_settings()
@@ -119,9 +133,11 @@ def show_week_card(profile, monday, by_day, holidays):
 
 
 def show_allergy_card(profile):
-    """내 알레르기 카드: 등록한 식품을 빨간 알약으로 보여 준다."""
+    """내 알레르기 카드: 등록한 식품을 빨간 알약으로 보여 준다. 로그인 전에는 로그인을 권한다."""
     with st.container(key="card_today_allergy"):
-        if len(profile["allergies"]) == 0:
+        if not is_logged_in():
+            body = f'<p class="muted">{esc(T["my_allergy_login"])}</p>'
+        elif len(profile["allergies"]) == 0:
             body = f'<p class="muted">{esc(T["my_allergy_none"])}</p>'
         else:
             chips = ""
@@ -133,7 +149,11 @@ def show_allergy_card(profile):
 
         st.html(f'<h3 class="info-card-title">{esc(T["my_allergy_title"])}</h3>{body}')
 
-        if st.button(T["my_allergy_edit"], key="allergy_edit"):
+        if not is_logged_in():
+            if st.button(T["nav_login"], key="allergy_login"):
+                show_login()
+
+        elif st.button(T["my_allergy_edit"], key="allergy_edit"):
             show_settings()
 
 

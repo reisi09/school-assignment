@@ -1,8 +1,14 @@
 # database.py
 # SQLite에 두 가지를 저장한다.
-#   profiles  내 설정: 이름표(별명), 학교, 알레르기 번호
-#   meals     급식 기록: 나이스 포털에서 받은 급식을 메뉴 한 줄씩 저장한다. 찾기 화면이 여기서 찾는다.
+#   users  계정: 아이디, 비밀번호 해시, 내 학교, 내 알레르기 번호
+#   meals  급식 기록: 나이스 포털에서 받은 급식을 메뉴 한 줄씩 저장한다. 찾기 화면이 여기서 찾는다.
+#
+# 비밀번호는 원래 글자를 저장하지 않는다. 소금(salt)을 섞어 해시로 바꾼 값만 저장해서,
+# 데이터베이스 파일을 열어 봐도 원래 비밀번호를 알 수 없다.
 
+import hashlib
+import hmac
+import secrets
 import sqlite3
 from datetime import date
 from pathlib import Path
@@ -12,6 +18,14 @@ from foods import parse_dishes
 
 # 이 파일과 같은 폴더에 데이터베이스 저장
 DB_PATH = Path(__file__).resolve().parent / "meal_allergy.db"
+
+# 아이디 글자 수와 비밀번호 최소 글자 수
+USERNAME_MIN = 3
+USERNAME_MAX = 20
+PASSWORD_MIN = 8
+
+# 비밀번호 해시를 만들 때 되풀이하는 횟수. 많을수록 비밀번호를 하나씩 맞혀 보는 공격이 느려진다.
+HASH_ROUNDS = 200_000
 
 
 def connect_db():
@@ -26,19 +40,20 @@ def create_tables():
     conn = connect_db()
 
     try:
+        # username에 UNIQUE를 걸어 같은 아이디가 두 번 저장되지 않게 한다.
         # allergies는 알레르기 번호를 쉼표로 이은 글자다. 예: "5,10"
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS profiles (
+            CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nickname TEXT NOT NULL UNIQUE,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
                 school_name TEXT NOT NULL,
                 school_kind TEXT NOT NULL,
                 atpt_code TEXT NOT NULL,
                 school_code TEXT NOT NULL,
                 allergies TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                created_at TEXT NOT NULL
             )
             """
         )
@@ -67,77 +82,100 @@ def create_tables():
         conn.close()
 
 
-# ---------- 내 설정 ----------
+# ---------- 비밀번호 ----------
 
 
-def save_profile(nickname, school, allergies):
+def hash_password(password, salt=None):
     """
-    내 설정을 이름표로 저장한다. 같은 이름표가 있으면 내용을 바꾼다.
+    비밀번호를 해시로 바꾼다. 결과는 "소금$해시" 모양의 글자다.
 
-    school은 neis.py가 돌려준 학교(이름, 종류, 교육청 코드, 학교 코드)다.
-    allergies는 알레르기 번호 목록이다.
-    반환값: SUCCESS / EMPTY(빈 이름표)
+    소금(salt)은 계정마다 다른 무작위 글자다. 그래서 같은 비밀번호라도 저장되는 글자가 달라진다.
     """
-    nickname = nickname.strip()
+    if salt is None:
+        salt = secrets.token_hex(16)
 
-    if nickname == "":
-        return "EMPTY"
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), HASH_ROUNDS).hex()
 
-    codes = []
+    return salt + "$" + digest
 
-    for code in allergies:
-        codes.append(str(code))
 
-    now = now_kst()
+def check_password(password, stored):
+    """입력한 비밀번호가 저장된 해시와 맞는지 확인한다."""
+    salt = stored.split("$")[0]
+
+    # compare_digest는 비교에 걸리는 시간이 늘 같아서, 걸린 시간으로 답을 짐작할 수 없다.
+    return hmac.compare_digest(hash_password(password, salt), stored)
+
+
+# ---------- 계정 ----------
+
+
+def user_from_row(row):
+    """users 테이블의 한 줄을 화면이 쓰는 계정 정보로 바꾼다. 비밀번호 해시는 넣지 않는다."""
+    allergies = []
+
+    for part in row["allergies"].split(","):
+        if part != "":
+            allergies.append(int(part))
+
+    return {
+        "id": row["id"],
+        "username": row["username"],
+        "school": {
+            "name": row["school_name"],
+            "kind": row["school_kind"],
+            "atpt_code": row["atpt_code"],
+            "school_code": row["school_code"],
+        },
+        "allergies": allergies,
+    }
+
+
+def create_user(username, password, password_confirm, school):
+    """
+    회원가입: 아이디와 비밀번호를 확인하고 계정을 만든다. 처음 학교는 school이고 알레르기는 없다.
+
+    반환값: SUCCESS / BAD_USERNAME(3~20자가 아님) / SHORT_PASSWORD(8자보다 짧음)
+            MISMATCH(비밀번호 확인이 다름) / TAKEN(이미 있는 아이디)
+    """
+    username = username.strip()
+
+    if not USERNAME_MIN <= len(username) <= USERNAME_MAX:
+        return "BAD_USERNAME"
+
+    if len(password) < PASSWORD_MIN:
+        return "SHORT_PASSWORD"
+
+    if password != password_confirm:
+        return "MISMATCH"
+
     conn = connect_db()
 
     try:
-        found = conn.execute(
-            "SELECT id FROM profiles WHERE nickname = ?",
-            (nickname,),
-        ).fetchone()
-
-        if found is None:
-            conn.execute(
-                """
-                INSERT INTO profiles (
-                    nickname, school_name, school_kind, atpt_code, school_code,
-                    allergies, created_at, updated_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    nickname,
-                    school["name"],
-                    school["kind"],
-                    school["atpt_code"],
-                    school["school_code"],
-                    ",".join(codes),
-                    now,
-                    now,
-                ),
+        conn.execute(
+            """
+            INSERT INTO users (
+                username, password_hash, school_name, school_kind, atpt_code, school_code,
+                allergies, created_at
             )
-        else:
-            # 처음 저장한 시각(created_at)은 그대로 두고 나머지만 바꾼다.
-            conn.execute(
-                """
-                UPDATE profiles
-                SET school_name = ?, school_kind = ?, atpt_code = ?, school_code = ?,
-                    allergies = ?, updated_at = ?
-                WHERE nickname = ?
-                """,
-                (
-                    school["name"],
-                    school["kind"],
-                    school["atpt_code"],
-                    school["school_code"],
-                    ",".join(codes),
-                    now,
-                    nickname,
-                ),
-            )
-
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                username,
+                hash_password(password),
+                school["name"],
+                school["kind"],
+                school["atpt_code"],
+                school["school_code"],
+                "",
+                now_kst(),
+            ),
+        )
         conn.commit()
+
+    except sqlite3.IntegrityError:
+        # username에 UNIQUE가 걸려 있어서 같은 아이디가 이미 있으면 이 오류가 난다.
+        return "TAKEN"
 
     finally:
         conn.close()
@@ -145,14 +183,14 @@ def save_profile(nickname, school, allergies):
     return "SUCCESS"
 
 
-def load_profile(nickname):
-    """이름표로 내 설정을 불러온다. 없으면 None이다."""
+def login(username, password):
+    """아이디와 비밀번호가 맞으면 계정 정보를, 틀리면 None을 돌려준다."""
     conn = connect_db()
 
     try:
         row = conn.execute(
-            "SELECT * FROM profiles WHERE nickname = ?",
-            (nickname.strip(),),
+            "SELECT * FROM users WHERE username = ?",
+            (username.strip(),),
         ).fetchone()
 
     finally:
@@ -161,23 +199,45 @@ def load_profile(nickname):
     if row is None:
         return None
 
-    allergies = []
+    if not check_password(password, row["password_hash"]):
+        return None
 
-    for part in row["allergies"].split(","):
-        if part != "":
-            allergies.append(int(part))
+    return user_from_row(row)
 
-    return {
-        "nickname": row["nickname"],
-        "school": {
-            "name": row["school_name"],
-            "kind": row["school_kind"],
-            "atpt_code": row["atpt_code"],
-            "school_code": row["school_code"],
-        },
-        "allergies": allergies,
-        "created_at": row["created_at"],
-    }
+
+def save_settings(user_id, school, allergies):
+    """로그인한 계정의 학교와 알레르기를 저장하고, 바뀐 계정 정보를 돌려준다."""
+    codes = []
+
+    for code in allergies:
+        codes.append(str(code))
+
+    conn = connect_db()
+
+    try:
+        conn.execute(
+            """
+            UPDATE users
+            SET school_name = ?, school_kind = ?, atpt_code = ?, school_code = ?, allergies = ?
+            WHERE id = ?
+            """,
+            (
+                school["name"],
+                school["kind"],
+                school["atpt_code"],
+                school["school_code"],
+                ",".join(codes),
+                user_id,
+            ),
+        )
+        conn.commit()
+
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    finally:
+        conn.close()
+
+    return user_from_row(row)
 
 
 # ---------- 급식 기록 ----------

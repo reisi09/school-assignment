@@ -1,20 +1,13 @@
 # screen_settings.py
-# 내 설정 창: 학교와 알레르기를 이름표(별명)로 저장하고 다시 불러온다.
-# 저장한 이름표는 주소창의 ?me=이름표 에도 남아서, 새로고침해도 내 설정이 유지된다.
+# 내 설정 창(로그인한 사람만): 학교와 알레르기를 골라 내 계정에 저장한다.
 
 import streamlit as st
 
 from common import esc, get_profile
-from database import load_profile, save_profile
+from database import save_settings
 from foods import ALLERGENS
 from neis import NeisError, search_schools
 from texts import TEXT as T
-
-
-def use_profile(profile):
-    """설정을 지금 쓰는 설정으로 정하고, 주소창에 이름표를 남긴다."""
-    st.session_state["profile"] = profile
-    st.query_params["me"] = profile["nickname"]
 
 
 def allergy_label(code):
@@ -29,7 +22,7 @@ def school_label(school):
 
 @st.dialog(T["settings_title"], width="medium")
 def show_settings():
-    """내 설정 창. 위에서 학교·알레르기·이름표를 저장하고, 맨 아래 접힌 칸에서 다른 기기의 설정을 불러온다."""
+    """내 설정 창. 학교를 찾아 고르고, 알레르기를 골라 저장한다."""
     profile = get_profile()
     st.html(f'<p class="dialog-intro">{esc(T["settings_intro"])}</p>')
 
@@ -75,36 +68,8 @@ def show_settings():
     )
     st.caption(T["allergies_help"])
 
-    # 3. 이름표와 저장. 이름표는 로그인 대신 쓰는 별명이다.
-    nickname = st.text_input(T["field_nickname"], value=profile["nickname"], key="nickname_input")
-    st.caption(T["nickname_help"])
-
+    # 3. 저장: 내 계정(users 테이블의 내 줄)에 저장하고, 바뀐 계정 정보를 지금 쓰는 정보로 바꾼다.
     if st.button(T["settings_save"], type="primary", key="settings_save"):
-        status = save_profile(nickname, school, allergies)
-
-        if status == "EMPTY":
-            st.warning(T["err_no_nickname"])
-        else:
-            use_profile(load_profile(nickname))
-            st.toast(T["settings_saved"].format(nickname=nickname.strip()))
-            st.rerun()
-
-    # 4. 이름표로 불러오기: 다른 기기나 브라우저에서 저장한 설정을 가져올 때만 쓰므로 접어 둔다.
-    with st.expander(T["load_title"]):
-        st.caption(T["load_help"])
-
-        with st.container(horizontal=True, vertical_alignment="bottom"):
-            load_name = st.text_input(T["load_label"], key="load_name")
-            load_clicked = st.button(T["load_button"], key="load_button")
-
-        if load_clicked:
-            loaded = load_profile(load_name)
-
-            if loaded is None:
-                st.warning(T["load_none"])
-            else:
-                use_profile(loaded)
-                st.toast(T["load_done"].format(nickname=loaded["nickname"]))
-                st.rerun()
-
-    st.caption(T["shared_notice"])
+        st.session_state["user"] = save_settings(profile["id"], school, allergies)
+        st.toast(T["settings_saved"])
+        st.rerun()
