@@ -1,5 +1,5 @@
 # screen_settings.py
-# 내 설정 창: 학교, 학년, 반, 알레르기를 이름표(별명)로 저장하고 다시 불러온다.
+# 내 설정 창: 학교와 알레르기를 이름표(별명)로 저장하고 다시 불러온다.
 # 저장한 이름표는 주소창의 ?me=이름표 에도 남아서, 새로고침해도 내 설정이 유지된다.
 
 import streamlit as st
@@ -7,16 +7,8 @@ import streamlit as st
 from common import esc, get_profile
 from database import load_profile, save_profile
 from foods import ALLERGENS
-from neis import NeisError, count_classes, search_schools
-from days import today_kst
+from neis import NeisError, search_schools
 from texts import TEXT as T
-
-# 학교 종류마다 학년 수
-GRADE_COUNTS = {
-    "초등학교": 6,
-    "중학교": 3,
-    "고등학교": 3,
-}
 
 
 def use_profile(profile):
@@ -89,33 +81,7 @@ def show_settings():
 
     school = st.selectbox(T["school_pick"], choices, format_func=school_label, key="school_choice")
 
-    # 3. 학년과 반: 반 수는 나이스 포털에서 센다. 못 세면 15반까지 보여 준다.
-    grade_count = GRADE_COUNTS.get(school["kind"], 3)
-    grades = list(range(1, grade_count + 1))
-    grade = st.selectbox(
-        T["field_grade"],
-        grades,
-        index=min(profile["grade"], grade_count) - 1,
-        key="grade_choice",
-    )
-
-    try:
-        class_count = count_classes(school, today_kst().year, grade)
-    except NeisError:
-        class_count = 0
-
-    if class_count == 0:
-        class_count = 15
-
-    classes = list(range(1, class_count + 1))
-    class_nm = st.selectbox(
-        T["field_class"],
-        classes,
-        index=min(profile["class_nm"], class_count) - 1,
-        key="class_choice",
-    )
-
-    # 4. 알레르기
+    # 3. 알레르기
     allergies = st.multiselect(
         T["field_allergies"],
         list(ALLERGENS),
@@ -126,12 +92,12 @@ def show_settings():
     )
     st.caption(T["allergies_help"])
 
-    # 5. 이름표와 저장
+    # 4. 이름표와 저장
     nickname = st.text_input(T["field_nickname"], value=profile["nickname"], key="nickname_input")
     st.caption(T["nickname_help"])
 
     if st.button(T["settings_save"], type="primary", key="settings_save"):
-        status = save_profile(nickname, school, grade, class_nm, allergies)
+        status = save_profile(nickname, school, allergies)
 
         if status == "EMPTY":
             st.warning(T["err_no_nickname"])

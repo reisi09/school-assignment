@@ -1,5 +1,5 @@
-# test_school_today.py
-# 학교한눈의 계산·저장·자료 받기를 확인한다. 나이스 포털에는 실제로 연결하지 않는다.
+# test_meal_allergy.py
+# 급식 알레르기의 계산·저장·검색·자료 받기를 확인한다. 나이스 포털에는 실제로 연결하지 않는다.
 # 실행: python -m unittest -v
 
 import tempfile
@@ -14,6 +14,7 @@ import database
 import days
 import foods
 import neis
+import screen_meal
 
 
 class FoodsTest(unittest.TestCase):
@@ -53,30 +54,22 @@ class FoodsTest(unittest.TestCase):
 
 
 class DaysTest(unittest.TestCase):
-    def test_week_and_month_math(self):
+    def test_week_math(self):
         self.assertEqual(days.monday_of(date(2026, 11, 22)), date(2026, 11, 16))
         self.assertEqual(days.school_days(date(2026, 11, 16))[-1], date(2026, 11, 20))
-        self.assertEqual(days.add_months(date(2026, 12, 1), 1), date(2027, 1, 1))
-        self.assertEqual(days.add_months(date(2026, 1, 1), -1), date(2025, 12, 1))
-        self.assertEqual(days.last_of_month(date(2028, 2, 10)), date(2028, 2, 29))
-        self.assertEqual(days.d_day(date(2026, 11, 19), date(2026, 11, 17)), 2)
+        self.assertEqual(days.from_ymd("20261117"), date(2026, 11, 17))
 
-    def test_crowded_weeks_count_only_the_kind(self):
-        def event(day, kind):
-            return {"due_date": day, "kind": kind}
 
-        events = [
-            event(date(2026, 11, 16), "수행평가"),
-            event(date(2026, 11, 18), "수행평가"),
-            event(date(2026, 11, 20), "수행평가"),
-            event(date(2026, 11, 19), "과제"),
-            event(date(2026, 11, 23), "수행평가"),
-            event(date(2026, 11, 24), "수행평가"),
-        ]
+class EmptyDayTest(unittest.TestCase):
+    def test_future_weekday_without_meal_is_not_yet_published(self):
+        holidays = {date(2026, 11, 19): ["재량휴업일"]}
 
-        # 둘째 주는 2개라 몰린 주가 아니다. 과제는 세지 않는다.
-        self.assertEqual(days.find_crowded_weeks(events, "수행평가", 3), [(date(2026, 11, 16), 3)])
-        self.assertEqual(days.find_crowded_weeks(events, "과제", 3), [])
+        with mock.patch.object(screen_meal, "today_kst", return_value=date(2026, 11, 17)):
+            # 오늘 뒤의 평일인데 쉬는 날이 아니면 학교가 아직 올리지 않은 것이다.
+            self.assertEqual(screen_meal.empty_message(date(2026, 11, 18), holidays), "급식 자료 미등록")
+            # 쉬는 날이나 지난 날은 급식이 없는 것이다.
+            self.assertEqual(screen_meal.empty_message(date(2026, 11, 19), holidays), "급식 없음")
+            self.assertEqual(screen_meal.empty_message(date(2026, 11, 16), holidays), "급식 없음")
 
 
 class NeisTest(unittest.TestCase):
@@ -172,7 +165,7 @@ class NeisTest(unittest.TestCase):
 
         with mock.patch.object(neis, "get_key", return_value="test-key"):
             with mock.patch.object(neis.requests, "get", return_value=self.fake_response(data)) as get:
-                neis.call("hisTimetable", {})
+                neis.call("mealServiceDietInfo", {})
 
         sent = get.call_args.kwargs["params"]
         self.assertEqual(sent["KEY"], "test-key")
@@ -197,68 +190,56 @@ class DatabaseTest(unittest.TestCase):
             "school_code": "7530878",
         }
 
+    def meal(self, day, dishes):
+        """neis.fetch_meals()가 돌려주는 모양의 급식 하나"""
+        return {"date": day, "meal": "중식", "dishes": dishes}
+
     def test_profile_is_saved_and_updated_by_nickname(self):
-        self.assertEqual(database.save_profile("  ", self.school, 2, 8, []), "EMPTY")
-        self.assertIsNone(database.load_profile("우석"))
+        self.assertEqual(database.save_profile("  ", self.school, [5]), "EMPTY")
+        self.assertIsNone(database.load_profile("급식지킴이"))
 
-        database.save_profile("우석", self.school, 2, 8, [5, 10])
-        database.save_profile(" 우석 ", self.school, 3, 1, [])
+        database.save_profile("급식지킴이", self.school, [5, 10])
+        first = database.load_profile("급식지킴이")
 
-        profile = database.load_profile("우석")
+        other = dict(self.school, name="고색중학교", kind="중학교", school_code="7531000")
+        database.save_profile(" 급식지킴이 ", other, [])
+        second = database.load_profile("급식지킴이")
 
-        self.assertEqual(profile["school"], self.school)
-        self.assertEqual((profile["grade"], profile["class_nm"], profile["allergies"]), (3, 1, []))
+        self.assertEqual(first["allergies"], [5, 10])
+        # 같은 이름표로 저장하면 새 줄을 만들지 않고 내용만 바꾼다. 처음 저장한 시각은 그대로다.
+        self.assertEqual(second["school"], other)
+        self.assertEqual(second["allergies"], [])
+        self.assertEqual(second["created_at"], first["created_at"])
 
-    def test_events_are_checked_found_and_deleted(self):
-        add = database.add_event
-        day = date(2026, 11, 20)
+    def test_meals_are_saved_once_and_found_by_name_and_allergen(self):
+        meals = [
+            self.meal("20261116", "쌀밥<br/>돈까스 (1.2.5.6.10)<br/>닭갈비 (15)"),
+            self.meal("20261117", "치즈 돈까스 (2.5.6.10)<br/>배추김치 (9.13)"),
+        ]
 
-        self.assertEqual(add("7530878", 2, 8, "수행평가", " ", "논설문", day, ""), "NO_SUBJECT")
-        self.assertEqual(add("7530878", 2, 8, "수행평가", "국어", " ", day, ""), "NO_TITLE")
+        database.save_meals("7530878", meals)
+        database.save_meals("7530878", meals)
+        database.save_meals("9999999", [self.meal("20261117", "돈까스 (5)")])
 
-        add("7530878", 2, 8, "수행평가", "독서와 작문", "논설문 쓰기", day, "원고지 준비")
-        add("7530878", 2, 8, "과제", "영어Ⅱ", "단어 시험", day + timedelta(days=30), "")
-        add("7530878", 2, 7, "수행평가", "독서와 작문", "다른 반 일정", day, "")
+        # 같은 학교·날짜·끼니·메뉴는 두 번 저장해도 한 줄이다.
+        self.assertEqual(database.count_meals("7530878"), 5)
 
-        # 다른 반 일정과 기간 밖 일정은 보이지 않는다.
-        found = database.get_events("7530878", 2, 8, date(2026, 11, 1), date(2026, 11, 30))
+        # 띄어쓰기를 빼고 비교한다. 새 날짜부터 놓고, 다른 학교 기록은 섞이지 않는다.
+        by_name = database.search_meals("7530878", "돈 까스")
 
-        self.assertEqual([event["title"] for event in found], ["논설문 쓰기"])
-        self.assertEqual(found[0]["due_date"], day)
+        self.assertEqual([item["dish"] for item in by_name], ["치즈 돈까스", "돈까스"])
+        self.assertEqual(by_name[0]["meal_date"], date(2026, 11, 17))
+        self.assertEqual(by_name[0]["codes"], [2, 5, 6, 10])
 
-        # 메모의 낱말로도 찾는다.
-        everything = (date(2000, 1, 1), date(2100, 12, 31))
-        by_memo = database.get_events("7530878", 2, 8, *everything, keyword="원고지")
+        # 5번(대두)을 찾을 때 15번(닭고기)만 든 메뉴와 번호가 없는 메뉴는 나오지 않는다.
+        by_soy = database.search_meals("7530878", "", 5)
+        by_chicken = database.search_meals("7530878", "", 15)
 
-        self.assertEqual(len(by_memo), 1)
+        self.assertEqual([item["dish"] for item in by_soy], ["치즈 돈까스", "돈까스"])
+        self.assertEqual([item["dish"] for item in by_chicken], ["닭갈비"])
 
-        database.delete_event(found[0]["id"])
-
-        self.assertEqual(len(database.get_events("7530878", 2, 8, *everything)), 1)
-
-    def test_reviews_are_checked_and_ranked(self):
-        today = date(2026, 11, 17)
-        add = database.add_review
-
-        self.assertEqual(add("7530878", today, None, 5, ""), "NO_DISH")
-        self.assertEqual(add("7530878", today, "물쫄면", None, ""), "NO_STARS")
-        self.assertEqual(add("7530878", today, "물쫄면", 6, ""), "NO_STARS")
-
-        add("7530878", today, "물쫄면", 3, "")
-        add("7530878", today, "돈육한방수육", 5, "부드러움")
-        add("7530878", today, "돈육한방수육", 4, "양이 많음")
-        add("7530878", today, "파김치", 4, "")
-        add("9999999", today, "다른 학교 메뉴", 5, "")
-
-        # 평균이 높은 순서, 평균이 같으면 평가가 많은 순서다. 다른 학교 평가는 섞이지 않는다.
-        self.assertEqual(
-            database.get_top_dishes("7530878"),
-            [("돈육한방수육", 4.5, 2), ("파김치", 4.0, 1), ("물쫄면", 3.0, 1)],
-        )
-
-        recent = database.get_recent_reviews("7530878")
-
-        self.assertEqual([review["comment"] for review in recent], ["양이 많음", "부드러움"])
+        # 이름과 식품을 함께 주면 둘 다 맞는 메뉴만 찾는다.
+        self.assertEqual(database.search_meals("7530878", "김치", 5), [])
 
 
 if __name__ == "__main__":

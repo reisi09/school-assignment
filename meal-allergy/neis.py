@@ -1,6 +1,6 @@
 # neis.py
 # 나이스 교육정보 개방 포털(open.neis.go.kr)에서 학교 자료를 받아 온다.
-#   학교 찾기·기본 정보, 급식, 학사일정, 시간표, 학년별 반 수
+#   학교 찾기(schoolInfo), 급식(mealServiceDietInfo), 학사일정(SchoolSchedule: 쉬는 날 이름)
 #
 # 인증키 없이 쓰면 한 번에 5건까지만 준다. 그래서 기간이 길면 일주일씩, 그래도 넘치면 하루씩 나눠 받는다.
 # 인증키가 있으면 .streamlit/secrets.toml에 NEIS_KEY = "키" 한 줄을 넣는다. 이 파일은 git에 올리지 않는다.
@@ -17,13 +17,6 @@ API_URL = "https://open.neis.go.kr/hub/"
 
 # 인증키 없이 한 번에 받을 수 있는 건수
 FREE_LIMIT = 5
-
-# 학교 종류마다 시간표를 주는 곳이 다르다.
-TIMETABLE_SERVICES = {
-    "초등학교": "elsTimetable",
-    "중학교": "misTimetable",
-    "고등학교": "hisTimetable",
-}
 
 
 class NeisError(Exception):
@@ -159,27 +152,6 @@ def search_schools(name):
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_school_info(school):
-    """학교 기본 정보(주소, 전화, 홈페이지, 종류, 남녀 구분, 설립 구분)를 받는다."""
-    total, rows = call("schoolInfo", school_params(school))
-
-    if total == 0:
-        return None
-
-    row = rows[0]
-
-    return {
-        "name": row["SCHUL_NM"],
-        "address": (row["ORG_RDNMA"] or "") + " " + (row["ORG_RDNDA"] or ""),
-        "phone": row["ORG_TELNO"],
-        "homepage": row["HMPG_ADRES"],
-        "kind": row["SCHUL_KND_SC_NM"],
-        "gender": row["COEDU_SC_NM"],
-        "found": row["FOND_SC_NM"],
-    }
-
-
-@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_meals(school, start, end):
     """
     start부터 end까지의 급식을 받는다.
@@ -215,9 +187,9 @@ def fetch_meals(school, start, end):
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_schedule(school, start, end):
     """
-    start부터 end까지의 학사일정을 받는다.
+    start부터 end까지의 학사일정을 받는다. 급식이 없는 날의 이유(쉬는 날 이름)를 보여 줄 때 쓴다.
 
-    반환값: 일정 목록. 일정마다 날짜, 행사 이름, 쉬는 날인지, 학년별 해당 여부(1~6학년)가 있다.
+    반환값: 일정 목록. 일정마다 날짜, 행사 이름, 쉬는 날인지가 있다.
     """
     rows = fetch_range(
         "SchoolSchedule",
@@ -229,73 +201,13 @@ def fetch_schedule(school, start, end):
     events = []
 
     for row in rows:
-        # 학년별 해당 여부. Y면 그 학년 일정이다.
-        grades = []
-        flags = [
-            "ONE_GRADE_EVENT_YN",
-            "TW_GRADE_EVENT_YN",
-            "THREE_GRADE_EVENT_YN",
-            "FR_GRADE_EVENT_YN",
-            "FIV_GRADE_EVENT_YN",
-            "SIX_GRADE_EVENT_YN",
-        ]
-
-        for number, flag in enumerate(flags, start=1):
-            if row.get(flag) == "Y":
-                grades.append(number)
-
         events.append(
             {
                 "date": row["AA_YMD"],
                 "name": row["EVENT_NM"],
                 # 수업공제일명이 휴업일·공휴일이면 쉬는 날이다.
                 "holiday": row.get("SBTR_DD_SC_NM") in ("휴업일", "공휴일"),
-                "grades": grades,
             }
         )
 
     return events
-
-
-@st.cache_data(ttl=3600, show_spinner=False)
-def fetch_timetable(school, grade, class_nm, start, end):
-    """
-    start부터 end까지 한 반의 시간표를 받는다.
-
-    반환값: 시간표 목록. 줄마다 날짜, 교시(숫자), 과목이 있다.
-    인증키가 없으면 하루에 5교시까지만 받는다.
-    """
-    service = TIMETABLE_SERVICES.get(school["kind"], "hisTimetable")
-    params = school_params(school)
-    params["GRADE"] = grade
-    params["CLASS_NM"] = class_nm
-
-    rows = fetch_range(
-        service,
-        params,
-        ("TI_FROM_YMD", "TI_TO_YMD", "ALL_TI_YMD"),
-        start,
-        end,
-    )
-    lessons = []
-
-    for row in rows:
-        lessons.append(
-            {
-                "date": row["ALL_TI_YMD"],
-                "period": int(row["PERIO"]),
-                "subject": row["ITRT_CNTNT"],
-            }
-        )
-
-    return lessons
-
-
-@st.cache_data(ttl=3600, show_spinner=False)
-def count_classes(school, year, grade):
-    """그 해 그 학년의 반 수를 센다. 반 목록은 5건까지만 오지만 전체 건수는 정확하다."""
-    params = school_params(school)
-    params["AY"] = year
-    params["GRADE"] = grade
-
-    return call("classInfo", params)[0]

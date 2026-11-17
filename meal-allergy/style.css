@@ -47,7 +47,7 @@
 }
 
 /* Streamlit이 목록에 넣는 왼쪽 여백을 없앤다. 점 없는 목록은 앱이 직접 줄을 그린다. */
-[data-testid="stMain"] :is(.dishes, .lessons, .upcoming, .ranking, .recent, .legend-list) {
+[data-testid="stMain"] :is(.dishes, .legend-list, .week-list) {
   padding-left: 0;
 }
 
@@ -193,20 +193,6 @@
   color: var(--muted);
 }
 
-.lead.small {
-  margin-top: 0.25rem;
-  font-size: 0.9375rem;
-}
-
-.group-title {
-  margin: 2rem 0 0;
-  padding: 0;
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  color: var(--ink);
-}
-
 .summary {
   margin: 0.5rem 0;
   font-size: 1.0625rem;
@@ -263,19 +249,6 @@
   gap: 0.75rem;
 }
 
-/* 글자만 있는 카드 */
-.info-card {
-  margin-bottom: 1.25rem;
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  background: #ffffff;
-  box-shadow: var(--card-shadow), 0 0 0 1px rgba(0, 0, 0, 0.04);
-}
-
-.info-card.is-alert {
-  box-shadow: var(--card-shadow), 0 0 0 2px var(--red);
-}
-
 .info-card-title {
   margin: 0 0 0.75rem;
   padding: 0;
@@ -283,11 +256,6 @@
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--ink);
-}
-
-.info-card-title.sub {
-  margin-top: 1.5rem;
-  font-size: 1rem;
 }
 
 .soft {
@@ -321,18 +289,6 @@
   color: var(--ink);
 }
 
-.spec a {
-  color: var(--ink);
-}
-
-.plain {
-  margin: 0;
-  padding-left: 1.125rem;
-  font-size: 0.9375rem;
-  line-height: 1.9;
-  color: var(--ink);
-}
-
 /* ---------- 알약 모양 표시 ---------- */
 
 .pill {
@@ -348,9 +304,7 @@
 }
 
 .pill-red { background: var(--red); color: #ffffff; }
-.pill-yellow { background: #ffd21f; color: var(--ink); }
 .pill-mint { background: var(--mint); color: var(--ink); }
-.pill-navy { background: var(--navy); color: #ffffff; }
 .pill-gray { background: var(--fill); color: #404040; }
 
 /* ---------- 급식 ---------- */
@@ -495,196 +449,6 @@ details.legend {
   color: #ffffff;
 }
 
-/* 인기 메뉴 순위와 최근 한줄평 */
-.ranking,
-.recent {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ranking li {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 0;
-  border-top: 1px solid var(--line);
-}
-
-.ranking li:first-child {
-  border-top: none;
-}
-
-.rank {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 50%;
-  background: var(--mint);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.ranking b,
-.recent b {
-  display: block;
-  font-size: 0.9375rem;
-  color: var(--ink);
-}
-
-.ranking span:not(.rank),
-.recent span {
-  display: block;
-  font-size: 0.8125rem;
-  color: var(--muted);
-}
-
-.recent li {
-  padding: 0.5rem 0;
-  border-top: 1px solid var(--line);
-  font-size: 0.8125rem;
-  color: #c99a00;
-}
-
-/* ---------- 시간표 ---------- */
-
-.table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: 1.25rem;
-}
-
-.timetable {
-  width: 100%;
-  min-width: 36rem;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 0.9375rem;
-}
-
-.timetable th,
-.timetable td {
-  padding: 0.875rem 0.75rem;
-  border-bottom: 1px solid var(--line);
-  text-align: center;
-  vertical-align: middle;
-}
-
-.timetable thead th {
-  background: var(--fill);
-  font-weight: 600;
-}
-
-.timetable thead th b {
-  display: block;
-  font-size: 1rem;
-  color: var(--ink);
-}
-
-.timetable thead th span {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.timetable tbody th {
-  width: 5rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.timetable td {
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.timetable .is-today,
-.timetable thead th:has(.today-mark) {
-  background: rgba(6, 231, 196, 0.16);
-}
-
-.timetable .is-holiday {
-  background: var(--fill);
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.today-mark {
-  display: inline-block;
-  margin-top: 0.25rem;
-  padding: 0 0.5rem;
-  border-radius: 999px;
-  background: var(--mint);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-/* ---------- 일정 ---------- */
-
-.event-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--line);
-  font-size: 0.9375rem;
-  color: var(--ink);
-}
-
-.info-card .event-row:first-of-type {
-  border-top: none;
-}
-
-.event-date {
-  flex: none;
-  width: 5.5rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.event-row b {
-  font-weight: 600;
-}
-
-.event-memo {
-  display: block;
-  font-size: 0.8125rem;
-  color: var(--muted);
-}
-
-.event-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-left: auto;
-}
-
-/* 우리 반 일정: 줄마다 지우기 버튼이 있다. (key가 ev_로 시작하는 줄) */
-[class*="st-key-ev_"] {
-  gap: 0.5rem;
-}
-
-[class*="st-key-ev_"] .event-row {
-  border-top: 1px solid var(--line);
-}
-
-.crowded {
-  margin: 0;
-  padding-left: 1.125rem;
-  font-size: 0.9375rem;
-  line-height: 1.8;
-  font-weight: 600;
-  color: var(--red);
-}
-
 /* ---------- 오늘 화면 ---------- */
 
 .alert-line {
@@ -708,69 +472,60 @@ details.legend {
   color: var(--ink);
 }
 
-.lessons,
-.upcoming {
+/* 이번 주 미리 보기: 날짜는 왼쪽, 알약은 오른쪽 */
+.week-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.lessons li {
+.week-list li {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.5rem 0;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.5rem;
   border-top: 1px solid var(--line);
   font-size: 0.9375rem;
+  font-weight: 600;
 }
 
-.lessons li:first-child,
-.upcoming li:first-child {
+.week-list li:first-child {
   border-top: none;
 }
 
-.period {
-  flex: none;
-  width: 3.5rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--muted);
+.week-list li.is-today {
+  border-radius: 0.75rem;
+  background: rgba(6, 231, 196, 0.16);
 }
 
-.upcoming li {
+/* 내 알레르기: 알약을 여러 줄로 늘어놓는다 */
+.chips {
   display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  padding: 0.625rem 0;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+/* ---------- 찾기 화면 ---------- */
+
+.result-row {
+  padding: 0.75rem 0;
   border-top: 1px solid var(--line);
 }
 
-.upcoming b {
-  display: block;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--ink);
+.result-row:first-child {
+  border-top: none;
 }
 
-.upcoming span:not(.dday) {
-  display: block;
+.result-date {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
   font-size: 0.8125rem;
   color: var(--muted);
 }
-
-/* 남은 날 표시: 학사일정은 남색, 우리 반 일정은 빨강 */
-.dday {
-  flex: none;
-  min-width: 4.5rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.dday-navy { background: var(--navy); color: #ffffff; }
-.dday-red { background: var(--red); color: #ffffff; }
 
 /* ---------- 버튼과 입력 ---------- */
 

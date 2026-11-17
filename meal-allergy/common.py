@@ -1,9 +1,9 @@
 # common.py
 # 여러 화면이 함께 쓰는 값과 함수
 #   1. 기본값: 기본 학교, 기본 설정, 메뉴 이름
-#   2. HTML 조각: esc, pill, spec_row 같은 작은 조각
-#   3. 날짜 글자: date_short, date_long, dday_text
-#   4. 함께 쓰는 화면 부분: 화면 제목, 주 바꾸기 버튼, 화면 아래 출처
+#   2. HTML 조각: esc, pill
+#   3. 날짜 글자: date_short, date_long
+#   4. 함께 쓰는 화면 부분: 화면 제목, 주 바꾸기 버튼, 화면 아래 안내와 출처
 #
 # 사용자가 입력한 글자는 esc()로 바꿔서 HTML에 넣는다.
 # 그대로 넣으면 입력한 글자가 HTML 태그로 동작할 수 있기 때문이다.
@@ -13,7 +13,7 @@ from datetime import timedelta
 
 import streamlit as st
 
-from days import d_day, monday_of, today_kst
+from days import monday_of, today_kst
 from texts import TEXT as T
 
 # ---------- 1. 기본값 ----------
@@ -29,26 +29,17 @@ DEFAULT_SCHOOL = {
 DEFAULT_PROFILE = {
     "nickname": "",
     "school": DEFAULT_SCHOOL,
-    "grade": 2,
-    "class_nm": 1,
     "allergies": [],
 }
 
 MENU_TODAY = T["menu_today"]
-MENU_MEAL = T["menu_meal"]
-MENU_TIMETABLE = T["menu_timetable"]
-MENU_SCHEDULE = T["menu_schedule"]
-MENU_SCHOOL = T["menu_school"]
+MENU_WEEK = T["menu_week"]
+MENU_SEARCH = T["menu_search"]
 
 
 def get_profile():
     """지금 쓰는 설정을 돌려준다. 저장한 설정이 없으면 기본 설정이다."""
     return st.session_state.get("profile", DEFAULT_PROFILE)
-
-
-def has_profile():
-    """내 설정을 저장했거나 불러왔는지 알려 준다."""
-    return "profile" in st.session_state
 
 
 def go_to(menu):
@@ -65,21 +56,8 @@ def esc(text):
 
 
 def pill(text, tone):
-    """알약 모양 표시를 만든다. tone은 red, yellow, mint, navy, gray 중 하나."""
+    """알약 모양 표시를 만든다. tone은 red, mint, gray 중 하나."""
     return f'<span class="pill pill-{tone}">{esc(text)}</span>'
-
-
-def spec_row(label, value):
-    """이름은 왼쪽, 값은 오른쪽에 두는 한 줄을 만든다. value는 HTML이다."""
-    return f'<div class="spec"><span>{esc(label)}</span><strong>{value}</strong></div>'
-
-
-def card(title, body, tone=""):
-    """제목과 내용(HTML)이 있는 카드 하나를 만든다. tone이 alert면 빨간 테두리다."""
-    return (
-        f'<div class="info-card {tone}">'
-        f'<h3 class="info-card-title">{esc(title)}</h3>{body}</div>'
-    )
 
 
 # ---------- 3. 날짜 글자 ----------
@@ -98,16 +76,6 @@ def date_short(day):
 def date_long(day):
     """11월 17일 화요일 모양의 날짜"""
     return T["date_long"].format(month=day.month, day=day.day, weekday=weekday_name(day))
-
-
-def dday_text(target):
-    """오늘부터 target까지 남은 날을 글자로 바꾼다. 오늘이면 '오늘'이다."""
-    days = d_day(target, today_kst())
-
-    if days == 0:
-        return T["dday_today"]
-
-    return T["dday_left"].format(days=days)
 
 
 # ---------- 4. 함께 쓰는 화면 부분 ----------
@@ -151,5 +119,5 @@ def show_week_nav(key):
 
 
 def show_source():
-    """화면 맨 아래에 자료 출처를 작게 보여 준다."""
-    st.html(f'<p class="source">{esc(T["source_note"])}</p>')
+    """화면 맨 아래에 알레르기 판단의 한계와 자료 출처를 작게 보여 준다."""
+    st.html(f'<p class="source">{esc(T["disclaimer"])}<br>{esc(T["source_note"])}</p>')
