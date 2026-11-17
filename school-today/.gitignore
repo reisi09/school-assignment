@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.db
+# 나이스 인증키를 넣는 파일. 절대 git에 올리지 않는다.
+.streamlit/secrets.toml
