@@ -39,6 +39,23 @@ def results_html(found, my_codes, words):
     return f'<div class="soft">{rows}</div>'
 
 
+def results_table(found):
+    """찾은 메뉴를 표의 줄로 바꾼다. 줄마다 날짜·끼니·메뉴·알레르기 번호 칸이 있다."""
+    table = []
+
+    for item in found:
+        table.append(
+            {
+                T["table_date"]: date_short(item["meal_date"]),
+                T["table_meal"]: item["meal_name"],
+                T["table_dish"]: item["dish"],
+                T["table_codes"]: ", ".join(str(code) for code in item["codes"]),
+            }
+        )
+
+    return table
+
+
 def show_search():
     """찾기 화면"""
     profile = get_profile()
@@ -92,6 +109,10 @@ def show_search():
                         f'<p class="summary">{esc(T["search_result"].format(count=len(found)))}</p>'
                         + results_html(found, profile["allergies"], my_words(profile))
                     )
+
+                    # 같은 결과를 Streamlit 표로도 보여 준다.
+                    st.html(f'<p class="group-title">{esc(T["search_table_title"])}</p>')
+                    st.dataframe(results_table(found), hide_index=True)
 
         st.caption(T["search_saved_count"].format(count=count_meals(school["school_code"])))
         show_source()

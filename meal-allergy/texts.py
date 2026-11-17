@@ -123,6 +123,11 @@ TEXT = {
     "search_range": "지난 4주와 앞으로 4주 급식을 저장한 뒤, 저장된 우리 학교 급식 기록 전체에서 찾습니다.",
     "search_saved_count": "저장된 메뉴 기록 {count}개",
     "search_result": "찾은 메뉴 {count}개",
+    "search_table_title": "찾은 메뉴 표",
+    "table_date": "날짜",
+    "table_meal": "끼니",
+    "table_dish": "메뉴",
+    "table_codes": "알레르기 번호",
     "search_none": "찾은 메뉴가 없으니 메뉴 이름이나 식품을 바꿔 찾아보세요.",
     "err_search_empty": "검색 조건이 비어 있으니 메뉴 이름을 입력하거나 알레르기 식품을 하나 고르세요.",
 
