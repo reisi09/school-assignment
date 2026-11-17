@@ -12,22 +12,26 @@ https://meal-allergy.streamlit.app
 
 ## 화면 안내
 
-처음에는 고색고등학교 급식을 보여 줍니다. `내 설정`에서 학교와 알레르기를 바꿉니다.
+로그인하지 않아도 기본 학교인 고색고등학교 급식을 볼 수 있습니다. 내 알레르기 표시는 로그인한 뒤 알레르기를 저장해야 나옵니다. 위쪽 메뉴 오른쪽에는 로그인 전에는 `로그인` 하나, 로그인 뒤에는 `내 설정`과 `로그아웃`이 보입니다.
 
 | 화면 | 하는 일 |
 | --- | --- |
 | `오늘` | 오늘 급식과 열량, 내 알레르기 번호가 표시된 메뉴 수를 봅니다. 월요일부터 금요일까지의 `이번 주 미리 보기`와 등록한 `내 알레르기`도 보여 줍니다. |
 | `급식표` | 월요일부터 금요일까지 급식을 날짜별 카드로 봅니다. `지난주`·`이번 주`·`다음 주`로 이동합니다. 내 알레르기 메뉴를 빨갛게 표시하며, 열량·급식 인원·영양 정보·원산지·알레르기 번호표를 확인합니다. |
 | `찾기` | `메뉴 이름`이나 `알레르기 식품`으로 저장된 우리 학교 급식 기록을 찾습니다. 날짜·끼니·메뉴·알레르기 번호와 저장된 메뉴 기록 수를 보여 줍니다. |
-| `내 설정` 창 | 맨 위 안내를 읽고 학교를 찾은 뒤 학교와 `내 알레르기`를 고릅니다. 로그인 대신 쓰는 `이름표(별명)`를 입력하고 도움말을 읽은 뒤 `내 설정 저장`을 누릅니다. 저장한 설정은 아래의 접힌 칸 `다른 기기에서 저장한 설정 불러오기`를 펼쳐 불러옵니다. 안내에 따라 `저장할 때 쓴 이름표`를 입력하고 `불러오기`를 누릅니다. 맨 아래에는 이름표 공유와 개인정보 주의 안내가 있습니다. |
+| `로그인` 창 | `로그인`·`회원가입` 탭이 있습니다. 로그인할 때는 아이디와 비밀번호를 입력하고 `로그인`을 누릅니다. 틀리면 둘 중 무엇이 틀렸는지 구분하지 않고 안내합니다. 회원가입할 때는 아이디(3~20자), 비밀번호(8자 이상), 비밀번호 확인을 입력하고 `가입하기`를 누릅니다. 같은 아이디로는 가입할 수 없으며, 가입하면 바로 로그인합니다. 처음 학교는 고색고등학교이고 알레르기는 없습니다. |
+| `내 설정` 창 | 로그인한 사람만 엽니다. 학교 이름을 입력하고 `학교 찾기`를 누른 뒤 학교를 고릅니다. `내 알레르기`를 여러 개 고르고 `내 설정 저장`을 누르면 내 계정에 저장합니다. 다른 기기에서도 같은 계정으로 로그인하면 저장한 학교와 알레르기를 씁니다. |
+
+`오늘` 화면 맨 위에는 로그인 전에는 `로그인하고 내 알레르기를 등록하세요`와 `로그인` 버튼이 나옵니다. 로그인했지만 알레르기를 저장하지 않았다면 `내 알레르기를 등록하세요`와 `내 설정 열기` 버튼이 나옵니다. 알레르기까지 저장하면 이 안내 카드는 사라집니다. 로그인 뒤 학교 이름 줄에는 `고색고등학교 · 아이디님`처럼 학교와 아이디가 함께 나옵니다. `내 알레르기` 카드도 로그인 전에는 로그인 안내와 `로그인` 버튼을 보여 줍니다.
 
 ## 등록·조회·검색
 
 | 구분 | 대상 | 사용 방법 |
 | --- | --- | --- |
-| 등록 | 내 설정: `profiles` | `내 설정`에서 학교·알레르기·이름표를 저장합니다. 같은 이름표로 저장하면 기존 설정을 바꿉니다. |
+| 등록 | 회원가입: `users` | `로그인` 창의 `회원가입` 탭에서 아이디·비밀번호·비밀번호 확인을 입력하고 `가입하기`를 누릅니다. |
 | 등록 | 급식 기록: `meals` | `찾기`에서 검색하면 오늘 앞뒤 28일의 급식을 받아 메뉴 한 줄씩 저장합니다. 같은 학교·날짜·끼니·메뉴는 중복으로 남기지 않습니다. |
-| 조회 | 저장한 설정 | 이름표로 학교와 알레르기를 불러옵니다. |
+| 조회 | 로그인: `users` | 아이디와 비밀번호가 맞으면 내 계정의 학교와 알레르기를 읽습니다. |
+| 수정 | 내 설정: `users` | 로그인한 뒤 `내 설정`에서 학교와 알레르기를 고르고 `내 설정 저장`을 누릅니다. 내 계정의 설정만 바꿉니다. |
 | 조회 | 급식과 알레르기 표시 | `오늘`과 `급식표`에서 오늘·이번 주 급식을 보고 내 알레르기 번호가 표시된 메뉴를 확인합니다. |
 | 검색 | 급식 기록 | `메뉴 이름`·`알레르기 식품` 조건으로 `meals`를 SQL 검색합니다. 둘 다 고르면 두 조건에 모두 맞는 메뉴만 찾습니다. 메뉴 이름은 띄어쓰기를 빼고 비교합니다. |
 | 검색 | 학교 | `내 설정`의 `학교 찾기`에서 학교 이름으로 찾습니다. 결과에는 학교 이름과 주소를 함께 표시합니다. |
@@ -102,18 +106,19 @@ Streamlit Community Cloud에서는 앱의 Settings → Secrets에 같은 줄을 
 
 | 파일·폴더 | 역할 |
 | --- | --- |
-| `app.py` | 앱 설정과 위쪽 메뉴를 만들고 화면을 부릅니다. DB 테이블을 준비하고 주소창의 이름표로 설정을 불러옵니다. |
+| `app.py` | 앱 설정과 위쪽 메뉴를 만들고 화면을 부릅니다. DB 테이블을 준비하며, 로그인 여부에 따라 오른쪽 버튼을 바꿉니다. |
 | `common.py` | 기본 학교·설정, 화면 이동, 날짜 표시, HTML 처리, 주 이동 버튼과 출처 안내를 모읍니다. |
 | `neis.py` | 나이스 요청과 기간 나누기, 학교·급식·학사일정 조회를 맡습니다. |
 | `foods.py` | 메뉴 이름·알레르기 번호·열량·영양 정보·원산지를 읽고 내 알레르기와 비교합니다. |
 | `days.py` | 한국 시간과 날짜 형식을 다루고, 한 주의 월요일과 월요일부터 금요일까지의 날짜를 구합니다. |
-| `database.py` | SQLite에 내 설정과 급식 기록을 저장하고 조회·검색합니다. |
+| `database.py` | SQLite에 계정·설정·급식 기록을 저장하고 로그인·조회·검색을 처리합니다. 비밀번호 해시도 여기서 만듭니다. |
 | `screen_today.py` | 오늘 급식, 이번 주 미리 보기, 내 알레르기를 보여 줍니다. |
 | `screen_meal.py` | 주간 급식표와 알레르기 표시, 영양 정보·원산지·번호표를 만듭니다. |
 | `screen_search.py` | 급식 기록을 저장하고 메뉴 이름·알레르기 식품으로 검색합니다. |
-| `screen_settings.py` | 학교를 찾고 이름표로 설정을 저장하거나 불러옵니다. |
+| `screen_settings.py` | 학교를 찾고 내 계정에 학교와 알레르기를 저장합니다. |
+| `screen_account.py` | 로그인·회원가입 창을 보여 주고 로그인 상태와 로그아웃을 처리합니다. |
 | `texts.py` | 앱 문구를 `TEXT`에 모읍니다. |
-| `test_meal_allergy.py` | 계산·표시 문구·API 요청·DB 저장과 검색을 확인하는 테스트 12개입니다. |
+| `test_meal_allergy.py` | 계산·표시 문구·API 요청·계정·DB 저장과 검색을 확인하는 테스트 15개입니다. |
 | `style.css` | 메뉴·카드·버튼·알레르기 표시와 CSS 로고의 모양을 정합니다. |
 | `.gitignore` | 가상 환경·Python 임시 파일·DB 파일·인증키 파일을 git에서 제외합니다. |
 | `.streamlit/config.toml` | 색·글꼴·입력칸 모양을 정하고 정적 파일 제공을 켭니다. |
@@ -128,11 +133,12 @@ Streamlit Community Cloud에서는 앱의 Settings → Secrets에 같은 줄을 
 
 | 가져오는 파일 | 가져오는 대상 |
 | --- | --- |
-| `app.py` | → `common.py`, `database.py`, `screen_meal.py`, `screen_search.py`, `screen_settings.py`, `screen_today.py`, `texts.py` |
-| `screen_today.py` | → `common.py`, `days.py`, `foods.py`, `neis.py`, `screen_meal.py`, `screen_settings.py`, `texts.py` |
+| `app.py` | → `common.py`, `database.py`, `screen_account.py`, `screen_meal.py`, `screen_search.py`, `screen_settings.py`, `screen_today.py`, `texts.py` |
+| `screen_today.py` | → `common.py`, `days.py`, `foods.py`, `neis.py`, `screen_account.py`, `screen_meal.py`, `screen_settings.py`, `texts.py` |
 | `screen_meal.py` | → `common.py`, `days.py`, `foods.py`, `neis.py`, `texts.py` |
 | `screen_search.py` | → `common.py`, `database.py`, `days.py`, `foods.py`, `neis.py`, `screen_meal.py`, `screen_settings.py`, `texts.py` |
 | `screen_settings.py` | → `common.py`, `database.py`, `foods.py`, `neis.py`, `texts.py` |
+| `screen_account.py` | → `common.py`, `database.py`, `texts.py` |
 | `common.py` | → `days.py`, `texts.py` |
 | `neis.py` | → `days.py` |
 | `database.py` | → `days.py`, `foods.py` |
@@ -145,29 +151,30 @@ Streamlit Community Cloud에서는 앱의 Settings → Secrets에 같은 줄을 
 
 | 파일 | 주요 함수와 역할 |
 | --- | --- |
-| `app.py` | `show_nav`: 로고·화면 메뉴·설정 버튼을 보여 줍니다. |
-| `screen_today.py` | `show_today`: 오늘 화면을 모읍니다. `show_hero`: 학교와 날짜, 알레르기 등록 안내를 보여 줍니다. `show_meal_card`, `show_week_card`, `show_allergy_card`: 급식·이번 주·내 알레르기 카드를 만듭니다. `dishes_of`: 끼니별 메뉴를 모읍니다. `day_status`: 하루의 알레르기 메뉴 수나 급식이 없는 날의 문구를 만듭니다. |
+| `app.py` | `show_nav`: 로고·화면 메뉴를 보여 주고 로그인 여부에 따라 `로그인` 또는 `내 설정`·`로그아웃` 버튼을 보여 줍니다. |
+| `screen_today.py` | `show_today`: 오늘 화면을 모읍니다. `show_hero`: 학교와 날짜, 로그인·알레르기 등록 안내를 보여 줍니다. `setup_card`: 맨 위 안내 카드의 제목과 설명을 만듭니다. `show_meal_card`, `show_week_card`, `show_allergy_card`: 급식·이번 주·내 알레르기 카드를 만듭니다. `dishes_of`: 끼니별 메뉴를 모읍니다. `day_status`: 하루의 알레르기 메뉴 수나 급식이 없는 날의 문구를 만듭니다. |
 | `screen_meal.py` | `show_meal`: 주간 급식표를 보여 줍니다. `group_meals`, `group_holidays`: 급식과 쉬는 날 이름을 날짜별로 묶습니다. `empty_message`: 급식이 없는 날의 문구를 고릅니다. `dishes_html`, `day_card`, `pairs_html`, `allergy_legend_html`: 메뉴·하루 카드·영양 정보와 원산지·번호표를 만듭니다. |
 | `screen_search.py` | `show_search`: 검색 조건을 받고 급식을 저장한 뒤 검색합니다. `results_html`: 검색 결과를 날짜·끼니·메뉴로 보여 줍니다. |
-| `screen_settings.py` | `show_settings`: 내 설정 창을 엽니다. `use_profile`: 설정을 적용하고 주소창에 이름표를 남깁니다. `allergy_label`, `school_label`: 선택 칸의 글자를 만듭니다. |
+| `screen_settings.py` | `show_settings`: 내 설정 창을 열고 학교와 알레르기를 내 계정에 저장합니다. `allergy_label`, `school_label`: 선택 칸의 글자를 만듭니다. |
+| `screen_account.py` | `show_login`: 로그인·회원가입 탭을 보여 줍니다. `start_session`: 계정 정보를 로그인 상태로 두고 화면을 다시 그립니다. `log_out`: 로그인 상태를 지웁니다. |
 
 오늘 화면과 찾기 화면도 `screen_meal.py`의 `dishes_html`을 쓰므로 알레르기 표시 방법이 같습니다.
 
 ### 저장하는 자료와 함수
 
-`connect_db`는 같은 폴더의 `meal_allergy.db`에 연결합니다. `create_tables`는 `profiles`와 `meals`를 만들며, 이미 있으면 그대로 둡니다. 두 테이블에는 각각 9개와 7개, 모두 16개의 칸이 있습니다.
+`connect_db`는 같은 폴더의 `meal_allergy.db`에 연결합니다. `create_tables`는 `users`와 `meals`를 만들며, 이미 있으면 그대로 둡니다. 두 테이블에는 각각 9개와 7개, 모두 16개의 칸이 있습니다.
 
 | 테이블 | 칸 이름 | 저장하는 내용 |
 | --- | --- | --- |
-| `profiles` | `id` | 자동으로 붙는 고유 번호 |
-| `profiles` | `nickname` | 중복되지 않는 이름표 |
-| `profiles` | `school_name` | 학교 이름 |
-| `profiles` | `school_kind` | 학교 종류 |
-| `profiles` | `atpt_code` | 교육청 코드 |
-| `profiles` | `school_code` | 학교 코드 |
-| `profiles` | `allergies` | 쉼표로 이은 알레르기 번호. 예: `5,10` |
-| `profiles` | `created_at` | 처음 저장한 시각 |
-| `profiles` | `updated_at` | 마지막으로 저장한 시각 |
+| `users` | `id` | 자동으로 붙는 고유 번호(`INTEGER PRIMARY KEY`). 예: `1` |
+| `users` | `username` | 중복되지 않는 로그인 아이디(`TEXT UNIQUE`, 3~20자). 예: `급식지킴이` |
+| `users` | `password_hash` | `소금$해시` 모양의 글자(`TEXT`, 97자). 원래 비밀번호는 저장하지 않음 |
+| `users` | `school_name` | 학교 이름(`TEXT`). 처음에는 `고색고등학교` |
+| `users` | `school_kind` | 학교 종류(`TEXT`). 처음에는 `고등학교` |
+| `users` | `atpt_code` | 교육청 코드(`TEXT`). 처음에는 `J10` |
+| `users` | `school_code` | 학교 코드(`TEXT`). 처음에는 `7530878` |
+| `users` | `allergies` | 쉼표로 이은 알레르기 번호(`TEXT`). 예: `5,10`. 처음에는 빈 글자 |
+| `users` | `created_at` | 가입 시각(`TEXT`, 한국 시간 ISO 형식). 예: `2026-11-17T09:00:00+09:00` |
 | `meals` | `id` | 자동으로 붙는 고유 번호 |
 | `meals` | `school_code` | 학교 코드 |
 | `meals` | `meal_date` | 급식 날짜. 예: `2026-11-17` |
@@ -180,21 +187,38 @@ Streamlit Community Cloud에서는 앱의 Settings → Secrets에 같은 줄을 
 | --- | --- |
 | `connect_db` | SQLite에 연결하고 칸 이름으로 값을 읽도록 정합니다. |
 | `create_tables` | 두 테이블을 준비합니다. |
-| `save_profile` | 이름표로 설정을 저장하거나 바꿉니다. 이름표가 비면 저장하지 않으며, 수정할 때도 `created_at`은 유지합니다. |
-| `load_profile` | 이름표로 설정을 읽습니다. 없으면 `None`을 돌려줍니다. |
+| `hash_password` | 비밀번호에 무작위 소금을 섞어 해시를 만들고 `소금$해시` 모양으로 돌려줍니다. |
+| `check_password` | 저장된 소금으로 입력한 비밀번호의 해시를 다시 만들고 `hmac.compare_digest`로 비교합니다. |
+| `user_from_row` | `users`의 한 줄을 화면에서 쓸 계정 정보로 바꿉니다. 비밀번호 해시는 넣지 않습니다. |
+| `create_user` | 아이디 길이·비밀번호 길이·비밀번호 확인을 검사하고 계정을 만듭니다. 같은 아이디는 `UNIQUE`로 막으며, `sqlite3.IntegrityError`를 잡아 `TAKEN`을 돌려줍니다. |
+| `login` | 아이디와 비밀번호가 맞으면 계정 정보를, 틀리면 `None`을 돌려줍니다. |
+| `save_settings` | `user_id`로 내 계정의 학교와 알레르기를 바꾸고 바뀐 계정 정보를 돌려줍니다. |
 | `save_meals` | 받은 급식을 메뉴별로 저장합니다. 같은 `school_code`·`meal_date`·`meal_name`·`dish`는 `INSERT OR REPLACE`로 바꿔 씁니다. |
 | `search_meals` | 학교 코드·메뉴 이름·알레르기 번호로 SQL 검색하고 최근 날짜부터 돌려줍니다. |
 | `count_meals` | 해당 학교에 저장된 메뉴 기록 수를 셉니다. |
 
 `allergy_codes`의 앞뒤에 쉼표를 붙이는 이유는 번호를 정확히 구분하려는 것입니다. 5번을 `LIKE '%,5,%'`로 찾으면 15번인 `,15,`는 검색되지 않습니다. `search_meals`는 검색값을 SQL의 `?` 자리에 따로 전달합니다.
 
-DB에는 내 설정과 메뉴 검색에 필요한 급식 기록만 저장합니다. 열량·영양 정보·원산지·학사일정은 이 테이블에 저장하지 않습니다.
+DB에는 계정 정보와 내 설정, 메뉴 검색에 필요한 급식 기록을 저장합니다. 열량·영양 정보·원산지·학사일정은 이 테이블에 저장하지 않습니다.
 
-### 내 설정을 유지하는 방법
+### 로그인과 비밀번호 저장
 
-`screen_settings.py`의 `use_profile`은 설정을 `st.session_state["profile"]`에 넣고 `st.query_params["me"]`에 이름표를 넣습니다. 주소창에는 `?me=이름표`가 남습니다.
+`database.py`의 `hash_password`는 원래 비밀번호 대신 해시를 만듭니다. 해시는 비밀번호를 확인할 때 쓰는 글자입니다. 계정마다 `secrets.token_hex(16)`으로 만든 무작위 글자인 소금(salt)을 섞으므로 같은 비밀번호라도 저장되는 글자가 다릅니다. `hashlib.pbkdf2_hmac("sha256", …, 200000)`으로 200,000번 반복해 계산하고 `소금$해시` 모양의 97자 글자를 저장합니다. 원래 비밀번호는 저장하지 않습니다.
 
-새로고침하거나 그 주소를 다시 열면 `app.py`가 이름표를 읽어 `load_profile`로 설정을 불러옵니다. 현재 세션에 설정이 없을 때만 불러오며, DB에 해당 이름표가 있어야 합니다. 주소에는 설정 전체가 아니라 이름표만 들어갑니다. 로그인이나 비밀번호는 아닙니다.
+`check_password`는 저장된 소금을 꺼내 입력한 비밀번호의 해시를 다시 만듭니다. 두 값을 비교할 때는 비교 시간으로 값을 짐작하기 어렵게 하는 `hmac.compare_digest`를 씁니다.
+
+```python
+from database import check_password, hash_password
+
+stored = hash_password("password1")
+# stored에는 원래 비밀번호 대신 "소금$해시" 모양의 글자가 들어갑니다.
+check_password("password1", stored)  # True
+check_password("password2", stored)  # False
+```
+
+로그인한 계정 정보는 `st.session_state["user"]`에 둡니다. `screen_account.py`의 `start_session`이 이 값을 넣고, `log_out`이 지웁니다. 새로고침하면 로그인 상태가 사라지므로 다시 로그인해야 합니다.
+
+학교와 알레르기는 `save_settings(user_id, school, allergies)`가 `users`의 내 계정 줄에 저장합니다. 로그인 상태가 풀려도 DB에 저장한 설정은 남으며, 다른 기기에서도 같은 계정으로 로그인하면 그대로 씁니다. 비밀번호를 잊었을 때 되찾는 기능은 없습니다.
 
 ## 실행 방법
 
@@ -213,7 +237,7 @@ DB 파일 `meal_allergy.db`는 처음 실행할 때 같은 폴더에 자동으�
 python -m unittest -v
 ```
 
-`test_meal_allergy.py`에는 테스트가 12개 있습니다.
+`test_meal_allergy.py`에는 테스트가 15개 있습니다.
 
 | 구분 | 개수 | 확인하는 내용 |
 | --- | --- | --- |
@@ -221,7 +245,7 @@ python -m unittest -v
 | `DaysTest` | 1 | 주의 월요일, 월요일부터 금요일까지의 날짜, 날짜 글자 변환 |
 | `EmptyDayTest` | 1 | 미래의 급식 미등록일과 쉬는 날·지난날의 표시 문구 |
 | `NeisTest` | 4 | 주·일 단위로 나눠 받기, 정상 응답과 자료 없음, 연결·인증 오류, 인증키 유무에 따른 요청값 |
-| `DatabaseTest` | 2 | 이름표 저장·수정·불러오기, 급식 중복 방지, 학교별 검색, 띄어쓰기 무시, 5번과 15번 구분, 이름과 식품의 동시 검색 |
+| `DatabaseTest` | 5 | 가입 규칙과 해시만 저장, 맞는 비밀번호로만 로그인, 같은 비밀번호라도 서로 다른 소금과 해시, 계정에 설정 저장(계정 관련 4개). 급식 중복 방지·학교별 검색·띄어쓰기 무시·5번과 15번 구분·이름과 식품의 동시 검색(급식 관련 1개) |
 
 나이스에 실제로 연결하지 않고 가짜 응답으로 확인합니다. DB 테스트는 임시 DB를 사용하므로 앱에 저장한 자료를 건드리지 않습니다. 위 내용은 테스트 코드의 구성 설명이며, 테스트 실행 결과를 뜻하지는 않습니다.
 
@@ -239,8 +263,10 @@ Streamlit Community Cloud에서 새 앱을 만들고 다음 값을 입력합니�
 
 ## 알아 둘 점
 
-- 로그인이 없어 이름표를 아는 사람은 누구나 설정을 불러올 수 있습니다. 같은 이름표로 저장하면 다른 사람의 설정도 바뀝니다. 알레르기는 건강 정보이므로 실명이나 개인을 알아볼 수 있는 정보는 쓰지 않습니다.
-- Streamlit Community Cloud에서 앱이 다시 시작되면 DB가 지워질 수 있습니다. 저장한 설정과 급식 기록이 계속 남는다고 보장하지 않습니다.
+- 비밀번호를 잊으면 되찾을 수 없습니다.
+- 새로고침하면 로그인이 풀립니다. 다시 로그인해야 저장한 학교와 알레르기를 쓸 수 있습니다.
+- Streamlit Community Cloud에서 앱이 다시 시작되면 DB와 계정이 지워질 수 있습니다. 저장한 설정과 급식 기록이 계속 남는다고 보장하지 않습니다.
+- 알레르기는 건강 정보이므로 아이디에 실명이나 개인을 알아볼 수 있는 정보를 쓰지 않습니다.
 - `screen_meal.py`의 `empty_message`는 급식 자료가 없는 날짜가 오늘보다 뒤이고 학사일정의 쉬는 날 목록에도 없으면 `급식 자료 미등록`을 돌려줍니다. 그 밖에는 `급식 없음`을 돌려줍니다. 주간 화면은 월요일부터 금요일까지만 보여 주며, 쉬는 날 이름이 있으면 함께 표시합니다. 이 문구는 날짜와 학사일정으로 구분한 것이므로 실제 미등록 사유를 확인한 결과는 아닙니다.
 - 오늘 급식 카드에 자료가 없으면 `오늘 급식 자료가 없습니다.`로 표시합니다. 나이스 요청에 실패하면 연결 오류 안내도 나옵니다.
 - 달력 등 Streamlit 기본 요소의 일부 글자는 영어로 나올 수 있습니다. 이 앱에는 별도의 달력 입력 기능이 없습니다.
